@@ -69,7 +69,7 @@ void TestScene::OnInitializeScene()
 			{
 				uint idx = x * 5 + y;
 				Vector4 color = CommonUtils::GenColor(idx / 10.f, 0.5f);
-				Vector3 pos = offset + Vector3(x * cubewidth, 1e-3f + y * cubewidth, cubewidth * (idx % 2 == 0) ? 0.5f : -0.5f);
+				Vector3 pos = offset + Vector3(x * cubewidth, 1e-3f + y * cubewidth, cubewidth * (idx % 2 == 0) ? cubewidth* 0.5f : cubewidth * -0.5f);
 
 				GameObject* cube = BuildCuboidObject(
 					"",						// Optional: Name
@@ -111,6 +111,9 @@ void TestScene::OnInitializeScene()
 			}
 		}
 	};
+
+	//giant cube tower
+	create_cube_tower(Vector3(5.0f,5.0f,5.0f), 3.0f);
 
 	//Create Cube Towers
 	create_cube_tower(Vector3(3.0f, 0.5f, 3.0f), 1.0f);

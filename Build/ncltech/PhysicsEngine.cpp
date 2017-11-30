@@ -7,6 +7,7 @@
 #include <algorithm>
 
 
+
 void PhysicsEngine::SetDefaults()
 {
 	//Variables set here /will/ be reset with each scene
@@ -19,8 +20,8 @@ void PhysicsEngine::SetDefaults()
 PhysicsEngine::PhysicsEngine()
 {
 	//Variables set here will /not/ be reset with each scene
-	isPaused = false;  
-	debugDrawFlags = DEBUGDRAW_FLAGS_MANIFOLD | DEBUGDRAW_FLAGS_CONSTRAINT;
+	isPaused = false;
+	debugDrawFlags = DEBUGDRAW_FLAGS_MANIFOLD | DEBUGDRAW_FLAGS_CONSTRAINT | DEBUGDRAW_FLAGS_COLLISIONNORMALS;
 
 	SetDefaults();
 }
@@ -92,7 +93,7 @@ void PhysicsEngine::Update(float deltaTime)
 			updateRealTimeAccum -= updateTimestep;
 
 			//Additional IsPaused check here incase physics was paused inside one of it's components for debugging or otherwise
-			if (!isPaused) UpdatePhysics(); 
+			if (!isPaused) UpdatePhysics();
 		}
 
 		if (updateRealTimeAccum >= updateTimestep)
@@ -122,37 +123,37 @@ void PhysicsEngine::UpdatePhysics()
 
 
 	//A whole physics engine in 6 simple steps =D
-	
+
 	//-- Using positions from last frame --
 //1. Broadphase Collision Detection (Fast and dirty)
 	perfBroadphase.BeginTimingSection();
 	BroadPhaseCollisions();
 	perfBroadphase.EndTimingSection();
 
-//2. Narrowphase Collision Detection (Accurate but slow)
+	//2. Narrowphase Collision Detection (Accurate but slow)
 	perfNarrowphase.BeginTimingSection();
 	NarrowPhaseCollisions();
 	perfNarrowphase.EndTimingSection();
 
 
-//3. Initialize Constraint Params (precompute elasticity/baumgarte factor etc)
-	//Optional step to allow constraints to 
-	// precompute values based off current velocities 
-	// before they are updated loop below.
+	//3. Initialize Constraint Params (precompute elasticity/baumgarte factor etc)
+		//Optional step to allow constraints to 
+		// precompute values based off current velocities 
+		// before they are updated loop below.
 	for (Constraint* c : constraints) c->PreSolverStep(updateTimestep);
 
 
-//4. Update Velocities
+	//4. Update Velocities
 	perfUpdate.BeginTimingSection();
 	for (PhysicsNode* obj : physicsNodes) obj->IntegrateForVelocity(updateTimestep);
 	perfUpdate.EndTimingSection();
 
-//5. Constraint Solver
+	//5. Constraint Solver
 	perfSolver.BeginTimingSection();
 	for (Constraint* c : constraints) c->ApplyImpulse();
 	perfSolver.EndTimingSection();
 
-//6. Update Positions (with final 'real' velocities)
+	//6. Update Positions (with final 'real' velocities)
 	perfUpdate.BeginTimingSection();
 	for (PhysicsNode* obj : physicsNodes) obj->IntegrateForPosition(updateTimestep);
 	perfUpdate.EndTimingSection();
@@ -201,10 +202,10 @@ void PhysicsEngine::NarrowPhaseCollisions()
 	if (broadphaseColPairs.size() > 0)
 	{
 		//Collision data to pass between detection and manifold generation stages.
-		CollisionData colData;				
+		CollisionData colData;
 
 		//Collision Detection Algorithm to use
-		CollisionDetectionSAT colDetect;	
+		CollisionDetectionSAT colDetect;
 
 		// Iterate over all possible collision pairs and perform accurate collision detection
 		for (size_t i = 0; i < broadphaseColPairs.size(); ++i)
@@ -243,7 +244,26 @@ void PhysicsEngine::NarrowPhaseCollisions()
 
 				if (okA && okB)
 				{
-					/* TUTORIAL 5 CODE */
+					// Build full collision manifold that will also handle the
+					 // collision response between the two objects in the solver
+						 // stage
+
+					Manifold * manifold = new Manifold();
+
+					manifold->Initiate(cp.pObjectA, cp.pObjectB);
+
+					// Construct contact points that form the perimeter of the
+					// collision manifold
+
+					colDetect.GenContactPoints(manifold);
+
+					if (manifold->contactPoints.size() > 0)
+					{
+						// Add to list of manifolds that need solving
+						manifolds.push_back(manifold);
+					}
+					else
+						delete manifold;
 				}
 			}
 		}

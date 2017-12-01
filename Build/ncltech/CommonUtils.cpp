@@ -174,11 +174,14 @@ GameObject* CommonUtils::BuildCuboidObject(
 	rnode->SetBoundingRadius(halfdims.Length());
 
 	PhysicsNode* pnode = NULL;
+
 	if (physics_enabled)
 	{
 		pnode = new PhysicsNode();
 		pnode->SetPosition(pos);
 		pnode->SetInverseMass(inverse_mass);
+
+		pnode->SetBoundingRadius(halfdims.Length());
 
 		if (!collidable)
 		{

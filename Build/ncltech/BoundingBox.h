@@ -22,13 +22,22 @@ struct BoundingBox
 {
 	Vector3 _min;
 	Vector3 _max;
+	Vector3 _center;
 
 
 	//Initialize _min to max possible value and vice versa to force the first value incorporated to always be used for both min and max points.
 	BoundingBox()
 		: _min(FLT_MAX, FLT_MAX, FLT_MAX)
 		, _max(-FLT_MAX, -FLT_MAX, -FLT_MAX)
-	{}
+	{
+		Center();
+	}
+	BoundingBox(Vector3 min, Vector3 max)
+		: _min(min)
+		, _max(max)
+	{
+		Center();
+	}
 
 	//Expand the boundingbox to fit a given point. 
 	//  If no points have been set yet, both _min and _max will equal the point provided.
@@ -56,5 +65,26 @@ struct BoundingBox
 		bb.ExpandToFit(mtx * Vector3(_min.x, _max.y, _max.z));
 		bb.ExpandToFit(mtx * Vector3(_max.x, _max.y, _max.z));
 		return bb;
+	}
+
+	Vector3 Center() {
+
+		float x = (this->_min.x + this->_min.x) / 2.0f;
+		float y = (this->_min.y + this->_min.y) / 2.0f;
+		float z = (this->_min.z + this->_min.z) / 2.0f;
+
+		return Vector3(x, y, z);
+	}
+
+	BoundingBox DebugDraw() {
+		NCLDebug::DrawThickLine(_min, Vector3(_min.x, _max.y, _max.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		NCLDebug::DrawThickLine(_min, Vector3(_max.x, _max.y, _min.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		NCLDebug::DrawThickLine(_min, Vector3(_max.x, _min.y, _max.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		NCLDebug::DrawThickLine(Vector3(_min.x, _min.y, _max.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _min.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _min.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+
+
 	}
 };

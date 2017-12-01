@@ -5,6 +5,7 @@
 #include <nclgl\Window.h>
 #include <omp.h>
 #include <algorithm>
+#include "Octree.h"
 
 
 
@@ -21,7 +22,7 @@ PhysicsEngine::PhysicsEngine()
 {
 	//Variables set here will /not/ be reset with each scene
 	isPaused = false;
-	debugDrawFlags = DEBUGDRAW_FLAGS_MANIFOLD | DEBUGDRAW_FLAGS_CONSTRAINT | DEBUGDRAW_FLAGS_COLLISIONNORMALS;
+	debugDrawFlags = DEBUGDRAW_FLAGS_MANIFOLD | DEBUGDRAW_FLAGS_CONSTRAINT | DEBUGDRAW_FLAGS_COLLISIONNORMALS | DEBUGDRAW_FLAGS_OCTREE_OUTLINES;
 
 	SetDefaults();
 }
@@ -119,13 +120,10 @@ void PhysicsEngine::UpdatePhysics()
 	perfNarrowphase.UpdateRealElapsedTime(updateTimestep);
 	perfSolver.UpdateRealElapsedTime(updateTimestep);
 
-
-
-
 	//A whole physics engine in 6 simple steps =D
 
 	//-- Using positions from last frame --
-//1. Broadphase Collision Detection (Fast and dirty)
+	//1. Broadphase Collision Detection (Fast and dirty)
 	perfBroadphase.BeginTimingSection();
 	BroadPhaseCollisions();
 	perfBroadphase.EndTimingSection();
@@ -135,12 +133,16 @@ void PhysicsEngine::UpdatePhysics()
 	NarrowPhaseCollisions();
 	perfNarrowphase.EndTimingSection();
 
+	std::random_shuffle(manifolds.begin(), manifolds.end());
+	std::random_shuffle(constraints.begin(), constraints.end());
+
 
 	//3. Initialize Constraint Params (precompute elasticity/baumgarte factor etc)
 		//Optional step to allow constraints to 
 		// precompute values based off current velocities 
 		// before they are updated loop below.
-	for (Constraint* c : constraints) c->PreSolverStep(updateTimestep);
+	for (Manifold * m : manifolds) m->PreSolverStep(updateTimestep);
+	for (Constraint * c : constraints) c->PreSolverStep(updateTimestep);
 
 
 	//4. Update Velocities
@@ -150,7 +152,13 @@ void PhysicsEngine::UpdatePhysics()
 
 	//5. Constraint Solver
 	perfSolver.BeginTimingSection();
-	for (Constraint* c : constraints) c->ApplyImpulse();
+
+	for (size_t i = 0; i < SOLVER_ITERATIONS; ++i)
+	{
+		for (Manifold * m : manifolds) m->ApplyImpulse();
+		for (Constraint * c : constraints) c->ApplyImpulse();
+	}
+
 	perfSolver.EndTimingSection();
 
 	//6. Update Positions (with final 'real' velocities)
@@ -172,25 +180,36 @@ void PhysicsEngine::BroadPhaseCollisions()
 	//	Brute force approach.
 	//  - For every object A, assume it could collide with every other object.. 
 	//    even if they are on the opposite sides of the world.
+
+	bool octreesOn = false;
+	Octree * parent;
+
 	if (physicsNodes.size() > 0)
 	{
-		for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
+		if (octreesOn)
 		{
-			for (size_t j = i + 1; j < physicsNodes.size(); ++j)
+
+			parent = new Octree(physicsNodes, BoundingBox(Vector3(-10, -10, -10), Vector3(20, 20, 20)));
+		}
+		else {
+			for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
 			{
-				pnodeA = physicsNodes[i];
-				pnodeB = physicsNodes[j];
-
-				//Check they both atleast have collision shapes
-				if (pnodeA->GetCollisionShape() != NULL
-					&& pnodeB->GetCollisionShape() != NULL)
+				for (size_t j = i + 1; j < physicsNodes.size(); ++j)
 				{
-					CollisionPair cp;
-					cp.pObjectA = pnodeA;
-					cp.pObjectB = pnodeB;
-					broadphaseColPairs.push_back(cp);
-				}
+					pnodeA = physicsNodes[i];
+					pnodeB = physicsNodes[j];
 
+					//Check they both atleast have collision shapes
+					if (pnodeA->GetCollisionShape() != NULL
+						&& pnodeB->GetCollisionShape() != NULL)
+					{
+						CollisionPair cp;
+						cp.pObjectA = pnodeA;
+						cp.pObjectB = pnodeB;
+						broadphaseColPairs.push_back(cp);
+					}
+
+				}
 			}
 		}
 	}
@@ -263,7 +282,8 @@ void PhysicsEngine::NarrowPhaseCollisions()
 						manifolds.push_back(manifold);
 					}
 					else
-						delete manifold;
+						delete manifold;
+
 				}
 			}
 		}
@@ -290,6 +310,14 @@ void PhysicsEngine::DebugRender()
 		{
 			c->DebugDraw();
 		}
+	}
+
+	if (debugDrawFlags & DEBUGDRAW_FLAGS_OCTREE_OUTLINES)
+	{
+		//for (Octree* o : constraints)
+		//{
+		//	o->DebugDraw();
+		//}
 	}
 
 	// Draw all associated collision shapes

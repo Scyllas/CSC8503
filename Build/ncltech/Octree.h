@@ -12,7 +12,7 @@ public:
 	void DebugDraw();
 	void createChildren();
 
-	vector<PhysicsNode*>* checkOverlap();
+	vector<PhysicsNode*>*  checkOverlap();
 
 	void pushBackNodeToChild(vector<PhysicsNode*>* temp);
 

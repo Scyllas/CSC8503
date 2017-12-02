@@ -88,17 +88,70 @@ void Octree::createChildren()
 
 vector<PhysicsNode*>* Octree::checkOverlap() {
 
+	vector<PhysicsNode*>* temp;
+
 
 	for (vector<PhysicsNode*>::iterator it = passedNodes->begin(); it != passedNodes->end(); it++) {
+		float x = (*it)->GetPosition().x;
+		float y = (*it)->GetPosition().y;
+		float z = (*it)->GetPosition().z;
 
-		if (true) {
-			//position + rad > bound
-			//	or
-			//position - rad < bound
+		float rad = (*it)->GetBoundingRadius();
+		bool overlap = false;
+
+		//if x radius overlaps the bounds
+		if (x > dimensions._min.x) {
+			if (x - rad <= dimensions._min.x) {				
+				overlap = true;
+			}
+		}
+		else if (x < dimensions._min.x) {
+			if (x + rad >= dimensions._min.x) {				
+				overlap = true;
+			}
+		}
+		else if (x == dimensions._min.x) {			
+			overlap = true;
+		}
+		//if y radius overlaps the bounds
+		if (y > dimensions._min.y) {
+			if (y - rad <= dimensions._min.y) {				
+				overlap = true;
+			}
+		}
+		else if (y < dimensions._min.y) {
+			if (y + rad >= dimensions._min.y) {				
+				overlap = true;
+			}
+		}
+		else if (y == dimensions._min.y) {			
+			overlap = true;
+		}
+		//if z radius overlaps the bounds
+		if (z > dimensions._min.z) {
+			if (z - rad <= dimensions._min.z) {				
+				overlap = true;
+			}
+		}
+		else if (z < dimensions._min.z) {
+			if (z + rad >= dimensions._min.z) {			
+				overlap = true;
+			}
+		}
+		else if (z == dimensions._min.z) {
+			overlap = true;
+		}
+
+
+		if (overlap == true) {
+			myNodes->push_back(*it);
+		}
+		else {
+			temp->push_back(*it);
 		}
 
 	}
-
+	return temp;
 }
 
 void Octree::pushBackNodeToChild(vector<PhysicsNode*>* temp) {

@@ -16,6 +16,8 @@ public:
 
 	void pushBackNodeToChild(vector<PhysicsNode*>* temp);
 
+	vector<PhysicsNode*>* getNodes() { return myNodes;}
+	Octree* getChildren() { return m_childOctree; }
 
 private:
 
@@ -23,7 +25,7 @@ private:
 
 	BoundingBox dimensions;
 
-	Octree* m_childNode;
+	Octree* m_childOctree;
 
 
 	vector<PhysicsNode*>* passedNodes;

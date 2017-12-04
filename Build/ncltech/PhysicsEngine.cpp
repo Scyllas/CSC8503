@@ -189,7 +189,13 @@ void PhysicsEngine::BroadPhaseCollisions()
 		if (octreesOn)
 		{
 
-			parent = new Octree(physicsNodes, BoundingBox(Vector3(-10, -10, -10), Vector3(20, 20, 20)));
+			parent = new Octree(BoundingBox(Vector3(-10, -10, -10), Vector3(20, 20, 20)), &physicsNodes);
+			vector<vector<PhysicsNode*>> temp;
+			vector<PhysicsNode*>** child;
+			for (int i = 0; i < 8; i++) {
+				child = parent->getChildren();
+				temp.push_back(child[i]);
+			}
 		}
 		else {
 			for (size_t i = 0; i < physicsNodes.size() - 1; ++i)

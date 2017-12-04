@@ -18,6 +18,8 @@ with graphics frustum culling by using both AABB and bounding sphere's inside Sc
 #include <nclgl\Vector3.h>
 #include <nclgl\common.h>
 
+#include <nclgl\NCLDebug.h>
+
 struct BoundingBox
 {
 	Vector3 _min;
@@ -67,23 +69,35 @@ struct BoundingBox
 		return bb;
 	}
 
-	Vector3 Center() {
+	void Center() {
 
-		float x = (this->_min.x + this->_min.x) / 2.0f;
-		float y = (this->_min.y + this->_min.y) / 2.0f;
-		float z = (this->_min.z + this->_min.z) / 2.0f;
+		float x = (this->_min.x + this->_max.x) / 2.0f;
+		float y = (this->_min.y + this->_max.y) / 2.0f;
+		float z = (this->_min.z + this->_max.z) / 2.0f;
 
-		return Vector3(x, y, z);
+		_center = Vector3(x, y, z);
+	
 	}
 
-	BoundingBox DebugDraw() {
-		NCLDebug::DrawThickLine(_min, Vector3(_min.x, _max.y, _max.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-		NCLDebug::DrawThickLine(_min, Vector3(_max.x, _max.y, _min.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-		NCLDebug::DrawThickLine(_min, Vector3(_max.x, _min.y, _max.z), 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+	void DebugDraw() {
+		NCLDebug::DrawThickLine(_min, Vector3(_max.x, _min.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _min.z), Vector3(_max.x, _min.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _max.z), Vector3(_min.x, _min.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_min.x, _min.y, _max.z), _min, 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 
-		NCLDebug::DrawThickLine(Vector3(_min.x, _min.y, _max.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _min.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _min.z), _max, 1.0f, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		NCLDebug::DrawThickLine(_min, Vector3(_min.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _min.z), Vector3(_max.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _min.y, _max.z), Vector3(_max.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_min.x, _min.y, _max.z), Vector3(_min.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _min.z), Vector3(_max.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _max.y, _min.z), Vector3(_max.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _max.y, _max.z), Vector3(_min.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _max.z), Vector3(_min.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+
+
+
+
 
 
 	}

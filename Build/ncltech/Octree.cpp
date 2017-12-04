@@ -1,20 +1,35 @@
 #include "Octree.h"
 
-Octree::Octree(BoundingBox box, vector<PhysicsNode*>* physicsNodes)
+Octree::Octree(vector<Octree*>* deepestSubdivisions, BoundingBox box, vector<PhysicsNode*>* physicsNodes)
 {
+
+	deepestSubdivisions->push_back(this);
+
+	octreeMap = deepestSubdivisions;
 
 	dimensions = box;
 
 	passedNodes = physicsNodes;
 
+	myNodes = new vector<PhysicsNode*>();
+
 	DebugDraw();
 
 	if (physicsNodes != nullptr && physicsNodes->size() >= octreeMax) createChildren();
+	else { myNodes = physicsNodes; }
 
 }
 
 Octree::~Octree()
 {
+
+	//	delete m_childOctree;
+
+
+	//	delete passedNodes;
+	//	delete myNodes;
+
+	//	delete[] childNodes;
 }
 
 void Octree::DebugDraw()
@@ -27,126 +42,137 @@ void Octree::createChildren()
 	for (int i = 0; i < 8; i++) {
 		childNodes[i] = new vector<PhysicsNode*>();
 	}
-	vector<PhysicsNode*>* temp;
+	vector<PhysicsNode*> temp;
 
 	temp = checkOverlap();
 	pushBackNodeToChild(temp);
 
+	octreeMap->pop_back();
 
 	//childNodes
 	{
+		BoundingBox b;
 		if (childNodes[0]->size() == 0) {
-			m_childOctree[0] = Octree(
-				BoundingBox(
-					dimensions._min,
-					dimensions._center));
+			b = BoundingBox(dimensions._min, dimensions._center);
+			m_childOctree[0] = new Octree(octreeMap, b);
+			m_childOctree[0]->setParent(this);
 		}
 		else {
-			m_childOctree[0] = Octree(
-				BoundingBox(
-					dimensions._min,
-					dimensions._center),
-				childNodes[0]);
+			b = BoundingBox(dimensions._min, dimensions._center);
+			m_childOctree[0] = new Octree(octreeMap, b, childNodes[0]);
+			m_childOctree[0]->setParent(this);
 		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[1] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._min.y, dimensions._min.z),
-					Vector3(dimensions._max.x, dimensions._center.y, dimensions._center.z)));
-		}
-		else {
-			m_childOctree[1] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._min.y, dimensions._min.z),
-					Vector3(dimensions._max.x, dimensions._center.y, dimensions._center.z)),
-				childNodes[1]);
-		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[2] = Octree(
-				BoundingBox(
-					Vector3(dimensions._min.x, dimensions._center.y, dimensions._min.z),
-					Vector3(dimensions._center.x, dimensions._max.y, dimensions._center.z)));
+
+		if (childNodes[1]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._min.y, dimensions._min.z),
+				Vector3(dimensions._max.x, dimensions._center.y, dimensions._center.z));
+			m_childOctree[1] = new Octree(octreeMap, b);
+			m_childOctree[1]->setParent(this);
 		}
 		else {
-			m_childOctree[2] = Octree(
-				BoundingBox(
-					Vector3(dimensions._min.x, dimensions._center.y, dimensions._min.z),
-					Vector3(dimensions._center.x, dimensions._max.y, dimensions._center.z)),
-				childNodes[2]);
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._min.y, dimensions._min.z),
+				Vector3(dimensions._max.x, dimensions._center.y, dimensions._center.z));
+			m_childOctree[1] = new Octree(octreeMap, b, childNodes[1]);
+			m_childOctree[1]->setParent(this);
 		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[3] = Octree(
-				BoundingBox(
-					Vector3(dimensions._min.x, dimensions._min.y, dimensions._center.z),
-					Vector3(dimensions._center.x, dimensions._center.y, dimensions._max.z)));
-		}
-		else {
-			m_childOctree[3] = Octree(
-				BoundingBox(
-					Vector3(dimensions._min.x, dimensions._min.y, dimensions._center.z),
-					Vector3(dimensions._center.x, dimensions._center.y, dimensions._max.z)),
-				childNodes[3]);
-		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[4] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._center.y, dimensions._min.z),
-					Vector3(dimensions._max.x, dimensions._max.y, dimensions._center.z)));
+
+		if (childNodes[2]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._center.y, dimensions._min.z),
+				Vector3(dimensions._center.x, dimensions._max.y, dimensions._center.z));
+			m_childOctree[2] = new Octree(octreeMap, b);
+			m_childOctree[2]->setParent(this);
 		}
 		else {
-			m_childOctree[4] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._center.y, dimensions._min.z),
-					Vector3(dimensions._max.x, dimensions._max.y, dimensions._center.z)),
-				childNodes[4]);
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._center.y, dimensions._min.z),
+				Vector3(dimensions._center.x, dimensions._max.y, dimensions._center.z));
+			m_childOctree[2] = new Octree(octreeMap, b, childNodes[2]);
+			m_childOctree[2]->setParent(this);
 		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[5] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._min.y, dimensions._center.z),
-					Vector3(dimensions._max.x, dimensions._center.y, dimensions._max.z)));
-		}
-		else {
-			m_childOctree[5] = Octree(
-				BoundingBox(
-					Vector3(dimensions._center.x, dimensions._min.y, dimensions._center.z),
-					Vector3(dimensions._max.x, dimensions._center.y, dimensions._max.z)),
-				childNodes[5]);
-		}
-		if (childNodes[0]->size() == 0) {
-			Octree(
-				BoundingBox(
-					Vector3(dimensions._min.x, dimensions._center.y, dimensions._center.z),
-					Vector3(dimensions._center.x, dimensions._max.y, dimensions._max.z)));
+
+		if (childNodes[3]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._min.y, dimensions._center.z),
+				Vector3(dimensions._center.x, dimensions._center.y, dimensions._max.z));
+			m_childOctree[3] = new Octree(octreeMap, b);
+			m_childOctree[3]->setParent(this);
 		}
 		else {
-			m_childOctree[6] = Octree(
-				Octree(
-					BoundingBox(
-					Vector3(dimensions._min.x, dimensions._center.y, dimensions._center.z),
-					Vector3(dimensions._center.x, dimensions._max.y, dimensions._max.z)),
-				childNodes[6]));
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._min.y, dimensions._center.z),
+				Vector3(dimensions._center.x, dimensions._center.y, dimensions._max.z));
+			m_childOctree[3] = new Octree(octreeMap, b, childNodes[3]);
+			m_childOctree[3]->setParent(this);
 		}
-		if (childNodes[0]->size() == 0) {
-			m_childOctree[7] = Octree(
-				BoundingBox(
-					dimensions._center,
-					dimensions._max));
+
+		if (childNodes[4]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._center.y, dimensions._min.z),
+				Vector3(dimensions._max.x, dimensions._max.y, dimensions._center.z));
+			m_childOctree[4] = new Octree(octreeMap, b);
+			m_childOctree[4]->setParent(this);
 		}
 		else {
-			m_childOctree[7] = Octree(
-				BoundingBox(
-					dimensions._center,
-					dimensions._max),
-				childNodes[7]);
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._center.y, dimensions._min.z),
+				Vector3(dimensions._max.x, dimensions._max.y, dimensions._center.z));
+			m_childOctree[4] = new Octree(octreeMap, b, childNodes[4]);
+			m_childOctree[4]->setParent(this);
 		}
+
+		if (childNodes[5]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._min.y, dimensions._center.z),
+				Vector3(dimensions._max.x, dimensions._center.y, dimensions._max.z));
+			m_childOctree[5] = new Octree(octreeMap, b);
+			m_childOctree[5]->setParent(this);
+		}
+		else {
+			b = BoundingBox(
+				Vector3(dimensions._center.x, dimensions._min.y, dimensions._center.z),
+				Vector3(dimensions._max.x, dimensions._center.y, dimensions._max.z));
+			m_childOctree[5] = new Octree(octreeMap, b, childNodes[5]);
+			m_childOctree[5]->setParent(this);
+		}
+
+		if (childNodes[6]->size() == 0) {
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._center.y, dimensions._center.z),
+				Vector3(dimensions._center.x, dimensions._max.y, dimensions._max.z));
+			m_childOctree[6] = new Octree(octreeMap, b);
+			m_childOctree[6]->setParent(this);
+		}
+		else {
+			b = BoundingBox(
+				Vector3(dimensions._min.x, dimensions._center.y, dimensions._center.z),
+				Vector3(dimensions._center.x, dimensions._max.y, dimensions._max.z));
+			m_childOctree[6] = new Octree(octreeMap, b, childNodes[6]);
+			m_childOctree[6]->setParent(this);
+		}
+
+		if (childNodes[7]->size() == 0) {
+			b = BoundingBox(dimensions._center, dimensions._max);
+			m_childOctree[7] = new Octree(octreeMap, b);
+			m_childOctree[7]->setParent(this);
+		}
+		else {
+			b = BoundingBox(dimensions._center, dimensions._max);
+			m_childOctree[7] = new Octree(octreeMap, b, childNodes[7]);
+			m_childOctree[7]->setParent(this);
+		}
+	}
+	for (int i = 0; i < 8; i++) {
+		delete childNodes[i];
 	}
 }
 
 
-vector<PhysicsNode*>* Octree::checkOverlap() {
+vector<PhysicsNode*> Octree::checkOverlap() {
 
-	vector<PhysicsNode*>* temp;
+	vector<PhysicsNode*> temp;
 
 
 	for (vector<PhysicsNode*>::iterator it = passedNodes->begin(); it != passedNodes->end(); it++) {
@@ -205,16 +231,16 @@ vector<PhysicsNode*>* Octree::checkOverlap() {
 			myNodes->push_back(*it);
 		}
 		else {
-			temp->push_back(*it);
+			temp.push_back(*it);
 		}
 
 	}
 	return temp;
 }
 
-void Octree::pushBackNodeToChild(vector<PhysicsNode*>* temp) {
+void Octree::pushBackNodeToChild(vector<PhysicsNode*> temp) {
 
-	for (vector<PhysicsNode*>::iterator it = temp->begin(); it != temp->end(); it++) {
+	for (vector<PhysicsNode*>::iterator it = temp.begin(); it != temp.end(); it++) {
 
 		if ((*it)->GetPosition().x > dimensions._center.x) {
 			if ((*it)->GetPosition().y > dimensions._center.y) {

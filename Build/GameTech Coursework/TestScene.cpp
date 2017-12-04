@@ -113,7 +113,7 @@ void TestScene::OnInitializeScene()
 	};
 
 	//giant cube tower
-	create_cube_tower(Vector3(5.0f,5.0f,5.0f), 3.0f);
+	//create_cube_tower(Vector3(5.0f,5.0f,5.0f), 3.0f);
 
 	//Create Cube Towers
 	create_cube_tower(Vector3(3.0f, 0.5f, 3.0f), 1.0f);

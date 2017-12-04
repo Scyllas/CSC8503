@@ -42,6 +42,7 @@ Description:
 #include <nclgl\PerfTimer.h>
 #include <vector>
 #include <mutex>
+#include "Octree.h"
 
 
 //Number of jacobi iterations to apply in order to
@@ -62,6 +63,8 @@ Description:
 #define DEBUGDRAW_FLAGS_COLLISIONVOLUMES		0x4
 #define DEBUGDRAW_FLAGS_COLLISIONNORMALS		0x8
 #define DEBUGDRAW_FLAGS_OCTREE_OUTLINES			0x16
+
+class Octree;
 
 struct CollisionPair	//Forms the output of the broadphase collision detection
 {
@@ -90,6 +93,10 @@ public:
 	
 	//Debug draw all physics objects, manifolds and constraints
 	void DebugRender();
+
+	void iterateUp(Octree * parent, vector<PhysicsNode*>* nodes);
+
+
 
 
 
@@ -132,6 +139,7 @@ protected:
 	//Handles narrowphase collision detection
 	void NarrowPhaseCollisions();
 
+
 protected:
 	bool		isPaused;
 	float		updateTimestep, updateRealTimeAccum;
@@ -153,3 +161,5 @@ protected:
 	PerfTimer perfNarrowphase;
 	PerfTimer perfSolver;
 };
+
+

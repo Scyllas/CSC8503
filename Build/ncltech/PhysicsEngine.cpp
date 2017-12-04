@@ -5,7 +5,7 @@
 #include <nclgl\Window.h>
 #include <omp.h>
 #include <algorithm>
-#include "Octree.h"
+
 
 
 
@@ -181,45 +181,57 @@ void PhysicsEngine::BroadPhaseCollisions()
 	//  - For every object A, assume it could collide with every other object.. 
 	//    even if they are on the opposite sides of the world.
 
-	bool octreesOn = false;
+	bool octreesOn = true;
 	Octree * parent;
-
+	vector<Octree*> deepestSubdivisions;
 	if (physicsNodes.size() > 0)
 	{
 		if (octreesOn)
 		{
 
-			parent = new Octree(BoundingBox(Vector3(-10, -10, -10), Vector3(20, 20, 20)), &physicsNodes);
-			vector<vector<PhysicsNode*>> temp;
-			vector<PhysicsNode*>** child;
-			for (int i = 0; i < 8; i++) {
-				child = parent->getChildren();
-				temp.push_back(child[i]);
-			}
-		}
-		else {
-			for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
-			{
-				for (size_t j = i + 1; j < physicsNodes.size(); ++j)
-				{
-					pnodeA = physicsNodes[i];
-					pnodeB = physicsNodes[j];
+			parent = new Octree(&deepestSubdivisions, BoundingBox(Vector3(-10, -10, -10), Vector3(10, 10, 10)), &physicsNodes);
 
-					//Check they both atleast have collision shapes
-					if (pnodeA->GetCollisionShape() != NULL
-						&& pnodeB->GetCollisionShape() != NULL)
-					{
+			for (vector<Octree*>::iterator it = deepestSubdivisions.begin(); it != deepestSubdivisions.end(); it++) {
+				vector<PhysicsNode*> temp;
+				temp = *(*it)->getNodes();
+				iterateUp((*it)->getParent(), &temp);
+
+				for (vector<PhysicsNode*>::iterator itA = temp.begin(); itA != temp.end(); itA++) {
+					for (vector<PhysicsNode*>::iterator itB = itA + 1; itB != temp.end(); itB++) {
+
 						CollisionPair cp;
-						cp.pObjectA = pnodeA;
-						cp.pObjectB = pnodeB;
+						cp.pObjectA = *itA;
+						cp.pObjectB = *itB;
 						broadphaseColPairs.push_back(cp);
 					}
-
 				}
+			}
+			delete parent;
+		}
+	}
+	else {
+		for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
+		{
+			for (size_t j = i + 1; j < physicsNodes.size(); ++j)
+			{
+				pnodeA = physicsNodes[i];
+				pnodeB = physicsNodes[j];
+
+				//Check they both atleast have collision shapes
+				if (pnodeA->GetCollisionShape() != NULL
+					&& pnodeB->GetCollisionShape() != NULL)
+				{
+					CollisionPair cp;
+					cp.pObjectA = pnodeA;
+					cp.pObjectB = pnodeB;
+					broadphaseColPairs.push_back(cp);
+				}
+
 			}
 		}
 	}
 }
+
 
 
 void PhysicsEngine::NarrowPhaseCollisions()
@@ -336,5 +348,15 @@ void PhysicsEngine::DebugRender()
 				obj->GetCollisionShape()->DebugDraw();
 			}
 		}
+	}
+}
+
+void PhysicsEngine::iterateUp(Octree* parent, vector<PhysicsNode*>*  nodes) {
+
+	for (vector<PhysicsNode*>::iterator it = parent->getNodes()->begin(); it != parent->getNodes()->end(); it++) {
+		nodes->push_back(*it);
+	}
+	if (parent->getParent() != nullptr) {
+		iterateUp(parent, nodes);
 	}
 }

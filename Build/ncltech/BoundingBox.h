@@ -91,7 +91,7 @@ struct BoundingBox
 		NCLDebug::DrawThickLine(Vector3(_min.x, _min.y, _max.z), Vector3(_min.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 
 		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _min.z), Vector3(_max.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-		NCLDebug::DrawThickLine(Vector3(_max.x, _max.y, _min.z), Vector3(_max.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		NCLDebug::DrawThickLine(Vector3(_max.x, _max.y, _min.z), Vector3(_max.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 		NCLDebug::DrawThickLine(Vector3(_max.x, _max.y, _max.z), Vector3(_min.x, _max.y, _max.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 		NCLDebug::DrawThickLine(Vector3(_min.x, _max.y, _max.z), Vector3(_min.x, _max.y, _min.z), 0.1f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 

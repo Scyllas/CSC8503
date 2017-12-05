@@ -41,7 +41,7 @@ void Quit(bool error = false, const std::string &reason = "") {
 void Initialize()
 {
 	//Initialise the Window
-	if (!Window::Initialise("Game Technologies", 1280, 800, false))
+	if (!Window::Initialise("Game Technologies", 1600, 900, false))
 		Quit(true, "Window failed to initialise!");
 
 	//Initialize Renderer
@@ -113,6 +113,8 @@ void HandleKeyboardInputs()
 
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_G))
 		show_perf_metrics = !show_perf_metrics;
+
+
 }
 
 

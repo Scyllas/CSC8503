@@ -181,7 +181,7 @@ void PhysicsEngine::BroadPhaseCollisions()
 	//  - For every object A, assume it could collide with every other object.. 
 	//    even if they are on the opposite sides of the world.
 
-	bool octreesOn = true;
+	bool octreesOn = false;
 	Octree * parent;
 	vector<Octree*> deepestSubdivisions;
 	if (physicsNodes.size() > 0)
@@ -192,41 +192,48 @@ void PhysicsEngine::BroadPhaseCollisions()
 			parent = new Octree(&deepestSubdivisions, BoundingBox(Vector3(-10, -10, -10), Vector3(10, 10, 10)), &physicsNodes);
 
 			for (vector<Octree*>::iterator it = deepestSubdivisions.begin(); it != deepestSubdivisions.end(); it++) {
-				vector<PhysicsNode*> temp;
-				temp = *(*it)->getNodes();
-				iterateUp((*it)->getParent(), &temp);
-
-				for (vector<PhysicsNode*>::iterator itA = temp.begin(); itA != temp.end(); itA++) {
-					for (vector<PhysicsNode*>::iterator itB = itA + 1; itB != temp.end(); itB++) {
-
-						CollisionPair cp;
-						cp.pObjectA = *itA;
-						cp.pObjectB = *itB;
-						broadphaseColPairs.push_back(cp);
+				vector<PhysicsNode*>* temp = (*it)->getNodes();
+				if ((*it)->getParent()) {
+					iterateUp((*it)->getParent(), temp);
+				}
+				if (temp->size() > 1) {
+					for (vector<PhysicsNode*>::iterator itA = temp->begin(); itA != temp->end(); itA++) {
+						for (vector<PhysicsNode*>::iterator itB = itA + 1; itB != temp->end(); itB++) {
+							if ((*itA)->GetCollisionShape() != NULL
+								&& (*itB)->GetCollisionShape() != NULL)
+							{
+								CollisionPair cp;
+								cp.pObjectA = *itA;
+								cp.pObjectB = *itB;
+								broadphaseColPairs.push_back(cp);
+							}
+						}
 					}
 				}
+
 			}
 			delete parent;
 		}
-	}
-	else {
-		for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
-		{
-			for (size_t j = i + 1; j < physicsNodes.size(); ++j)
+
+		else {
+			for (size_t i = 0; i < physicsNodes.size() - 1; ++i)
 			{
-				pnodeA = physicsNodes[i];
-				pnodeB = physicsNodes[j];
-
-				//Check they both atleast have collision shapes
-				if (pnodeA->GetCollisionShape() != NULL
-					&& pnodeB->GetCollisionShape() != NULL)
+				for (size_t j = i + 1; j < physicsNodes.size(); ++j)
 				{
-					CollisionPair cp;
-					cp.pObjectA = pnodeA;
-					cp.pObjectB = pnodeB;
-					broadphaseColPairs.push_back(cp);
-				}
+					pnodeA = physicsNodes[i];
+					pnodeB = physicsNodes[j];
 
+					//Check they both atleast have collision shapes
+					if (pnodeA->GetCollisionShape() != NULL
+						&& pnodeB->GetCollisionShape() != NULL)
+					{
+						CollisionPair cp;
+						cp.pObjectA = pnodeA;
+						cp.pObjectB = pnodeB;
+						broadphaseColPairs.push_back(cp);
+					}
+
+				}
 			}
 		}
 	}
@@ -236,6 +243,23 @@ void PhysicsEngine::BroadPhaseCollisions()
 
 void PhysicsEngine::NarrowPhaseCollisions()
 {
+	/*if (broadphaseColPairs.size() > 0)
+	{
+
+		for (PhysicsNode* obj : physicsNodes)
+		{
+			obj->GetParent()->Render()->SetColorRecursive(Vector4(1.f, 1.f, 1.f, 1.f));
+		}
+
+		for (size_t i = 0; i < broadphaseColPairs.size(); ++i)
+		{
+			CollisionPair& cp = broadphaseColPairs[i];
+			cp.pObjectA->GetParent()->Render()->SetColorRecursive(Vector4(1.f, 0.f, 1.f, 1.f));
+		}
+	}*/
+
+	//return;
+
 	if (broadphaseColPairs.size() > 0)
 	{
 		//Collision data to pass between detection and manifold generation stages.
@@ -297,7 +321,8 @@ void PhysicsEngine::NarrowPhaseCollisions()
 					if (manifold->contactPoints.size() > 0)
 					{
 						// Add to list of manifolds that need solving
-						manifolds.push_back(manifold);
+ 
+ 						manifolds.push_back(manifold);
 					}
 					else
 						delete manifold;
@@ -353,10 +378,15 @@ void PhysicsEngine::DebugRender()
 
 void PhysicsEngine::iterateUp(Octree* parent, vector<PhysicsNode*>*  nodes) {
 
-	for (vector<PhysicsNode*>::iterator it = parent->getNodes()->begin(); it != parent->getNodes()->end(); it++) {
-		nodes->push_back(*it);
-	}
-	if (parent->getParent() != nullptr) {
-		iterateUp(parent, nodes);
+	if (parent) {
+
+		vector<PhysicsNode*> pNodes = *(parent->getNodes());
+
+		for (vector<PhysicsNode*>::iterator it = pNodes.begin(); it != pNodes.end(); it++) {
+			nodes->push_back(*it);
+		}
+
+		if (parent->getParent())
+			iterateUp(parent->getParent(), nodes);
 	}
 }

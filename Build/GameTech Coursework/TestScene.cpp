@@ -40,7 +40,7 @@ void TestScene::OnInitializeScene()
 	//  through them into NCLLOG() and look at the 'program_output.txt' later =]
 	NCLDebug::Log("This is a log entry - It will printed to the console, on screen log and <project_dir>\program_output.txt");
 	//NCLERROR("THIS IS AN ERROR!"); // <- On Debug mode this will also trigger a breakpoint in your code!
-	
+
 
 
 //<--- SCENE CREATION --->
@@ -121,16 +121,16 @@ void TestScene::OnInitializeScene()
 
 	//Create Test Ball Cubey things
 	create_ball_cube(Vector3(-8.0f, 0.5f, 12.0f), Vector3(0.5f, 0.5f, 0.5f), 0.1f);
-	create_ball_cube(Vector3(8.0f, 0.5f, 12.0f), Vector3(0.3f, 0.3f, 0.3f), 0.1f);
-	create_ball_cube(Vector3(-8.0f, 0.5f, -12.0f), Vector3(0.2f, 0.2f, 0.2f), 0.1f);
-	create_ball_cube(Vector3(8.0f, 0.5f, -12.0f), Vector3(0.5f, 0.5f, 0.5f), 0.1f);
+	//	create_ball_cube(Vector3(8.0f, 0.5f, 12.0f), Vector3(0.3f, 0.3f, 0.3f), 0.1f);
+		//create_ball_cube(Vector3(-8.0f, 0.5f, -12.0f), Vector3(0.2f, 0.2f, 0.2f), 0.1f);
+		//create_ball_cube(Vector3(8.0f, 0.5f, -12.0f), Vector3(0.5f, 0.5f, 0.5f), 0.1f);
 }
 
 void TestScene::OnCleanupScene()
 {
 	//Just delete all created game objects 
 	//  - this is the default command on any Scene instance so we don't really need to override this function here.
-	Scene::OnCleanupScene(); 
+	Scene::OnCleanupScene();
 }
 
 void TestScene::OnUpdateScene(float dt)
@@ -140,7 +140,7 @@ void TestScene::OnUpdateScene(float dt)
 	// You can add status entries to the top left from anywhere in the program
 	NCLDebug::AddStatusEntry(Vector4(1.0f, 0.2f, 0.2f, 1.0f), "Welcome to the Game Tech Framework!");
 	NCLDebug::AddStatusEntry(Vector4(1.0f, 0.4f, 0.4f, 1.0f), "   You can move the black car with the arrow keys");
-	
+
 	// You can print text using 'printf' formatting
 	bool donkeys = false;
 	NCLDebug::AddStatusEntry(Vector4(1.0f, 0.4f, 0.4f, 1.0f), "   The %s in this scene are dragable", donkeys ? "donkeys" : "cubes");
@@ -180,6 +180,19 @@ void TestScene::OnUpdateScene(float dt)
 			pobj->SetOrientation(pobj->GetOrientation() *
 				Quaternion::AxisAngleToQuaterion(Vector3(0.0f, 1.0f, 0.0f), -rot_speed));
 		}
+		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_J)) {
+			GameObject* sphere = BuildSphereObject(
+				"",					// Optional: Name
+				GraphicsPipeline::Instance()->GetCamera()->GetPosition(),// Position
+				1,			// Half-Dimensions
+				true,				// Physics Enabled?
+				10.f,				// Physical Mass (must have physics enabled)
+				true,				// Physically Collidable (has collision shape)
+				false,				// Dragable by user?
+				Vector4(1, 1, 1, 1));// Render color
+			sphere->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
+			this->AddGameObject(sphere);
+		}
 
 
 		// If you ever need to see any visual output from your algorithms, for debugging or otherwise
@@ -192,7 +205,7 @@ void TestScene::OnUpdateScene(float dt)
 		{
 			//Draw the rocket booster on the car using NCLDebug
 			Vector3 backward_dir = pobj->GetOrientation().ToMatrix3() * Vector3(0, 0, 1);
-			NCLDebug::DrawPoint(pobj->GetPosition() + backward_dir, 0.3f, Vector4(1.f, 0.7f, 0.0f, 1.0f)); 
+			NCLDebug::DrawPoint(pobj->GetPosition() + backward_dir, 0.3f, Vector4(1.f, 0.7f, 0.0f, 1.0f));
 			NCLDebug::DrawPoint(pobj->GetPosition() + backward_dir * 1.333f, 0.26f, Vector4(0.9f, 0.5f, 0.0f, 1.0f));
 			NCLDebug::DrawPoint(pobj->GetPosition() + backward_dir * 1.666f, 0.23f, Vector4(0.8f, 0.3f, 0.0f, 1.0f));
 			NCLDebug::DrawPoint(pobj->GetPosition() + backward_dir * 2.f, 0.2f, Vector4(0.7f, 0.2f, 0.0f, 1.0f));

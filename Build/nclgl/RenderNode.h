@@ -37,6 +37,14 @@ public:
 
 	const Vector4&	GetColor()		const				{return color;}
 	void			SetColor(const Vector4 &c)			{color = c;}
+	void			SetColorRecursive(const Vector4 &c) 
+	{ 
+
+		color = c;
+
+		for (RenderNode* child : children)
+			child->SetColorRecursive(c);
+	}
 
 	const Vector3&	GetModelScale()		const			{return modelScale;}
 	void			SetModelScale(const Vector3 &s)		{modelScale = s;}

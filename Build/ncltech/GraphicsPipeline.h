@@ -115,6 +115,8 @@ protected:
 	void RenderAllObjects(bool renderTransparentBothSides, std::function<void(RenderNode*)> perObjectFunc = NULL);
 	void BuildShadowTransforms(); //Builds the shadow projView matrices
 
+
+
 protected:
 	Matrix4 projViewMatrix;
 

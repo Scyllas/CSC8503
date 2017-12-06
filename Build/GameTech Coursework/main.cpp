@@ -5,6 +5,7 @@
 #include <nclgl\PerfTimer.h>
 
 #include "TestScene.h"
+#include "TestScene2.h"
 #include "EmptyScene.h"
 
 const Vector4 status_colour = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -52,8 +53,9 @@ void Initialize()
 
 	//Enqueue All Scenes
 	SceneManager::Instance()->EnqueueScene(new TestScene("GameTech #1 - Framework Sandbox!"));
-	SceneManager::Instance()->EnqueueScene(new EmptyScene("GameTech #2 - Peace and quiet"));
-	SceneManager::Instance()->EnqueueScene(new EmptyScene("GameTech #3 - More peace and quiet"));
+	SceneManager::Instance()->EnqueueScene(new TestScene2("GameTech #2 - Ball Pool!"));
+	SceneManager::Instance()->EnqueueScene(new EmptyScene("GameTech #3 - Peace and quiet"));
+	SceneManager::Instance()->EnqueueScene(new EmptyScene("GameTech #4 - More peace and quiet"));
 }
 
 // Print Debug Info
@@ -72,7 +74,7 @@ void PrintStatusEntries()
 		SceneManager::Instance()->GetCurrentSceneIndex() + 1,
 		SceneManager::Instance()->SceneCount(),
 		SceneManager::Instance()->GetCurrentScene()->GetSceneName().c_str()
-		);
+	);
 	NCLDebug::AddStatusEntry(status_colour, "     \x01 T/Y to cycle or R to reload scene");
 
 	//Print Performance Timers
@@ -82,6 +84,7 @@ void PrintStatusEntries()
 		timer_total.PrintOutputToStatusEntry(status_colour, "          Total Time     :");
 		timer_update.PrintOutputToStatusEntry(status_colour, "          Scene Update   :");
 		timer_physics.PrintOutputToStatusEntry(status_colour, "          Physics Update :");
+		PhysicsEngine::Instance()->PrintPerformanceTimers(status_colour);
 		timer_render.PrintOutputToStatusEntry(status_colour, "          Render Scene   :");
 	}
 	NCLDebug::AddStatusEntry(status_colour, "");
@@ -130,7 +133,7 @@ int main()
 	//Create main game-loop
 	while (Window::GetWindow().UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)) {
 		//Start Timing
-		
+
 		float dt = Window::GetWindow().GetTimer()->GetTimedMS() * 0.001f;	//How many milliseconds since last update?
 																		//Update Performance Timers (Show results every second)
 		timer_total.UpdateRealElapsedTime(dt);
@@ -144,7 +147,7 @@ int main()
 		//Handle Keyboard Inputs
 		HandleKeyboardInputs();
 
-		
+
 		timer_total.BeginTimingSection();
 
 		//Update Scene
@@ -169,10 +172,10 @@ int main()
 		}
 		timer_render.EndTimingSection();
 
-		
+
 
 		//Finish Timing
-		timer_total.EndTimingSection();		
+		timer_total.EndTimingSection();
 	}
 
 	//Cleanup

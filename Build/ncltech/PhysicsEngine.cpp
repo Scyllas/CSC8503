@@ -12,10 +12,11 @@
 void PhysicsEngine::SetDefaults()
 {
 	//Variables set here /will/ be reset with each scene
-	updateTimestep = 1.0f / 60.f;
+	updateTimestep = 1.0f / 120.f;
 	updateRealTimeAccum = 0.0f;
 	gravity = Vector3(0.0f, -9.81f, 0.0f);
 	dampingFactor = 0.999f;
+
 }
 
 PhysicsEngine::PhysicsEngine()

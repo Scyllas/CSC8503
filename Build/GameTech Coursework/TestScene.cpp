@@ -112,8 +112,24 @@ void TestScene::OnInitializeScene()
 		}
 	};
 
+	for (int i = 0; i < MAX_BALLS; i++) {
+		sphere[i] = BuildSphereObject(
+			"",					// Optional: Name
+			GraphicsPipeline::Instance()->GetCamera()->GetPosition(),// Position
+			1,			// Half-Dimensions
+			true,				// Physics Enabled?
+			10.f,				// Physical Mass (must have physics enabled)
+			true,				// Physically Collidable (has collision shape)
+			false,				// Dragable by user?
+			Vector4(1, 1, 1, 1));// Render color
+		sphere[i]->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
+	}
+
 	//giant cube tower
-	//create_cube_tower(Vector3(5.0f,5.0f,5.0f), 3.0f);
+	GameObject* sphere = BuildSphereObject("", Vector3(0.0f,5.0f,0.0f), 1, true, 10.f, true, false, Vector4(0.8f, 0.4f, 0.8f, 1.0f));
+	GameObject* cube = BuildCuboidObject("", Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f), true, 10.f, true, false, Vector4(1.0f, 0.0f, 0.8f, 0.5f));
+	this->AddGameObject(sphere);
+	this->AddGameObject(cube);
 
 	//Create Cube Towers
 	create_cube_tower(Vector3(3.0f, 0.5f, 3.0f), 1.0f);
@@ -181,17 +197,22 @@ void TestScene::OnUpdateScene(float dt)
 				Quaternion::AxisAngleToQuaterion(Vector3(0.0f, 1.0f, 0.0f), -rot_speed));
 		}
 		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_J)) {
-			GameObject* sphere = BuildSphereObject(
-				"",					// Optional: Name
-				GraphicsPipeline::Instance()->GetCamera()->GetPosition(),// Position
-				1,			// Half-Dimensions
-				true,				// Physics Enabled?
-				10.f,				// Physical Mass (must have physics enabled)
-				true,				// Physically Collidable (has collision shape)
-				false,				// Dragable by user?
-				Vector4(1, 1, 1, 1));// Render color
-			sphere->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
-			this->AddGameObject(sphere);
+
+			if (currentBallNum == MAX_BALLS - 1) {
+				currentBallNum = 0;
+				allBallsInPlay = true;
+			}
+			if (allBallsInPlay == false) {
+				this->AddGameObject(sphere[currentBallNum]);
+				sphere[currentBallNum]->Physics()->SetPosition(GraphicsPipeline::Instance()->GetCamera()->GetPosition());
+				sphere[currentBallNum]->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
+				currentBallNum++;
+			}
+			else {
+				sphere[currentBallNum]->Physics()->SetPosition(GraphicsPipeline::Instance()->GetCamera()->GetPosition());
+				sphere[currentBallNum]->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
+				currentBallNum++;
+			}
 		}
 
 

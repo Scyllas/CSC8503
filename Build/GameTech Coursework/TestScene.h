@@ -2,6 +2,8 @@
 
 #include <ncltech\Scene.h>
 
+
+
 class TestScene : public Scene
 {
 public:
@@ -15,4 +17,9 @@ public:
 protected:
 	float m_AccumTime;
 	GameObject* m_pPlayer;
+
+	GameObject* sphere[MAX_BALLS];
+
+	int currentBallNum = 0;
+	bool allBallsInPlay = false;
 };

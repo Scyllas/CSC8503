@@ -36,6 +36,8 @@ Description:
 #include <algorithm>
 #include <unordered_map>
 
+const int MAX_BALLS = 20;
+
 //Callback function called whenever the scene is updated
 // - Should be used to register Update(dt) functions for AI/Game Logic
 //Params:

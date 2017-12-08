@@ -18,9 +18,7 @@ public:
 	int m_StackHeight;
 	virtual void OnInitializeScene() override
 	{
-		PhysicsEngine::Instance()->SetGravity(Vector3(0, 0, 0));
-
-		////Create Ground
+		//Create Ground
 		this->AddGameObject(CommonUtils::BuildCuboidObject(
 			"Ground",
 			Vector3(0.0f, -1.0f, 0.0f),

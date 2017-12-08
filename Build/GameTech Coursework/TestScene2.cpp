@@ -47,12 +47,16 @@ void TestScene2::OnInitializeScene()
 
 	//<--- SCENE CREATION --->
 	//Create Ground
-	this->AddGameObject(BuildCuboidObject("Ground", Vector3(0.0f, -1.0f, 0.0f), Vector3(20.0f, 1.0f, 20.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
+	this->AddGameObject(BuildCuboidObject("Ground", Vector3(0.0f, -1.0f, 0.0f), Vector3(5.0f, 1.0f, 5.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
+	this->AddGameObject(BuildCuboidObject("GroundWallFront", Vector3(0.0f, 1.0f, 6.0f), Vector3(5.0f, 5.0f, 1.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
+	this->AddGameObject(BuildCuboidObject("GroundWallBack", Vector3(0.0f, 1.0f, -6.0f), Vector3(5.0f, 5.0f, 1.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
+	this->AddGameObject(BuildCuboidObject("GroundWallLeft", Vector3(-6.0f, 1.0f, 0.0f), Vector3(1.0f, 5.0f, 5.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
+	this->AddGameObject(BuildCuboidObject("GroundWallRight", Vector3(6.0f, 1.0f, 0.0f), Vector3(1.0f, 5.0f, 5.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
 
 	//Create Player (See OnUpdateScene)
 	m_pPlayer = BuildCuboidObject(
 		"Player1",					// Optional: Name
-		Vector3(5.f, 0.5f, 0.0f),	// Position
+		Vector3(0.f, 0.5f, 0.0f),	// Position
 		Vector3(0.5f, 0.5f, 1.0f),  // Half-Dimensions
 		true,						// Physics Enabled?
 		0.f,						// Physical Mass (must have physics enabled)
@@ -74,6 +78,35 @@ void TestScene2::OnInitializeScene()
 			Vector4(1, 1, 1, 1));// Render color
 		sphere[i]->Physics()->SetLinearVelocity(Matrix3::Transpose(GraphicsPipeline::Instance()->GetCamera()->BuildViewMatrix()) * Vector3(0, 0, -1) * 50.0f);
 	}
+
+	auto create_ball_cube = [&](const Vector3& offset, const Vector3& scale, float ballsize)
+	{
+		const int dims = 5;
+		const Vector4 col = Vector4(1.0f, 0.5f, 0.2f, 1.0f);
+
+		for (int x = 0; x < dims; ++x)
+		{
+			for (int y = 0; y < dims; ++y)
+			{
+				for (int z = 0; z < dims; ++z)
+				{
+					Vector3 pos = offset + Vector3(scale.x *x, scale.y * y, scale.z * z);
+					GameObject* sphere = BuildSphereObject(
+						"",					// Optional: Name
+						pos,				// Position
+						ballsize,			// Half-Dimensions
+						true,				// Physics Enabled?
+						10.f,				// Physical Mass (must have physics enabled)
+						true,				// Physically Collidable (has collision shape)
+						false,				// Dragable by user?
+						col);// Render color
+					this->AddGameObject(sphere);
+				}
+			}
+		}
+	};
+
+	create_ball_cube(Vector3(-4.0f, 0.5f, -4.0f), Vector3(2.0f, 2.0f, 2.0f), 0.8f);
 }
 
 void TestScene2::OnCleanupScene()

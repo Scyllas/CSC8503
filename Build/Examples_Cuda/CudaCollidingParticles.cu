@@ -14,7 +14,7 @@ struct CopyToOpenGL
 		const float world_dim = PARTICLE_GRID_SIZE * PARTICLE_GRID_CELL_SIZE;
 		const float3 world_offset = make_float3(world_dim * 0.5f, 0.0f, world_dim * 0.5f);
 		
-		float3 centred_pos = p._pos - world_offset;
+		float3 centred_pos = p._pos -world_offset;
 		return make_float3(centred_pos.x, centred_pos.y, centred_pos.z);
 	}
 };
@@ -113,7 +113,7 @@ struct GetCellGridIndex
 
 //Given a particle p, check for and collide it with all particles in the given cell index
 __device__
-void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle& particle,	Particle& out_particle,
+void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle& particle, Particle& out_particle,
 	int3 cell,
 	Particle* all_particles, uint* grid_cell_start, uint* grid_cell_end)
 {
@@ -131,7 +131,7 @@ void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle
 			continue;
 
 		Particle other_particle = all_particles[arr_idx];
-		
+
 		//Do a quick sphere-sphere test
 		float3 ab = other_particle._pos - particle._pos;
 		float lengthSq = dot(ab, ab);
@@ -144,13 +144,13 @@ void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle
 			float3 abn = ab / len;
 
 			//Direct normal collision (no friction/shear)
-			float abnVel = dot(other_particle._vel - particle._vel, abn);		
+			float abnVel = dot(other_particle._vel - particle._vel, abn);
 			float jn = -(abnVel * (1.f + COLLISION_ELASTICITY));
 
 			//Extra energy to overcome overlap error
 			float overlap = PARTICLE_RADIUS * 2.f - len;
 			float b = overlap * baumgarte_factor;
-			
+
 			//Normally we just add correctional energy (b) to our velocity,
 			// but with such small particles and so many collisions this quickly gets 
 			// out of control! The other way to solve positional errors is to move
@@ -161,8 +161,8 @@ void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle
 			// around with these values though! :)
 			jn += b;
 			//out_particle._pos -= abn * overlap * 0.5f; //Half positional correction, half because were only applying to A and not A + B
-			
-			
+
+
 			jn = max(jn, 0.0f);
 			//We just assume each particle is the same mass, so half the velocity change is applied to each.
 			out_particle._vel -= abn * (jn * 0.5f);
@@ -170,6 +170,53 @@ void CollideParticleWithCell(float baumgarte_factor, uint particle_idx, Particle
 
 	}
 }
+
+__device__
+void CollideParticleWithPendulum(float baumgarte_factor, uint particle_idx, Particle& particle, Particle& out_particle, 
+	float pendulumRadius, float3 pendulumPosition, float3 pendulumLinearVelocity)
+{
+
+		//Do a quick sphere-sphere test
+		float3 ab = pendulumPosition - particle._pos;
+		float lengthSq = dot(ab, ab);
+
+		const float diameterSq = (PARTICLE_RADIUS + pendulumRadius) * (PARTICLE_RADIUS + pendulumRadius);
+		//float distBet = sqrt(pow(pendulumPosition.x - particle._pos.x, 2) + pow(pendulumPosition.y - particle._pos.y, 2) + pow(pendulumPosition.z - particle._pos.z, 2));
+		if (lengthSq < diameterSq)
+		{
+			//We have a collision!
+			float len = sqrtf(lengthSq);
+			float3 abn = ab / len;
+
+			//Direct normal collision (no friction/shear)
+			float abnVel = dot( -particle._vel, abn);
+			float jn = -(abnVel * (1.f + COLLISION_ELASTICITY));
+
+			//Extra energy to overcome overlap error
+			float overlap = PARTICLE_RADIUS + pendulumRadius - len;
+			float b = overlap * baumgarte_factor;
+
+			//Normally we just add correctional energy (b) to our velocity,
+			// but with such small particles and so many collisions this quickly gets 
+			// out of control! The other way to solve positional errors is to move
+			// the positions of the spheres, though this has numerous other problems and 
+			// is ruins our collision neighbour checks. Though in general, velocity correction
+			// adds energy and positional correction removes energy (and is unstable with the 
+			// way we check collisions) so for now, we'll just use a half of each. Try messing
+			// around with these values though! :)
+			float temp = sqrt(dot(pendulumLinearVelocity, pendulumLinearVelocity));
+			jn += b * temp;
+			//out_particle._pos -= abn * overlap * 0.5f; //Half positional correction, half because were only applying to A and not A + B
+
+
+			jn = max(jn, 0.0f);
+			//We just assume each particle is the same mass, so half the velocity change is applied to each.
+			out_particle._vel -= abn * jn;
+		}
+
+}
+
+
 
 __global__
 void CollideParticles(float baumgarte_factor, uint num_particles, Particle* particles, Particle* out_particles, uint* grid_cell_start, uint* grid_cell_end)
@@ -199,6 +246,41 @@ void CollideParticles(float baumgarte_factor, uint num_particles, Particle* part
 	}
 
 	out_particles[index] = out_p;
+}
+
+__global__
+void CollideParticles(float baumgarte_factor, uint num_particles, Particle* particles, Particle* out_particles, uint* grid_cell_start, uint* grid_cell_end, float pendulumRadius, float3 pendulumPosition, float3 pendulumLinearVelocity)
+{
+	uint index = blockIdx.x*blockDim.x + threadIdx.x;
+	if (index >= num_particles)
+		return;
+	//if (index == 0) {
+	//	//TODO::continue here, need to print all variables I need to debug
+	//	//fprintf();
+	//}
+
+	//For each particle, check for and collide it with all neighbouring particles.
+	//  - As we know the particle radius is never larger than the grid cell size we only
+	//    ever have to check in a one cell radius around (and including) our grid cell.
+	Particle particle = particles[index];
+	Particle out_particle = particle;
+	int3 cell = GetGridCell(particle._pos);
+
+	for (int z = -1; z <= 1; ++z)
+	{
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				int3 check_cell_idx = cell + make_int3(x, y, z);
+				CollideParticleWithCell(baumgarte_factor, index, particle, out_particle, check_cell_idx, particles, grid_cell_start, grid_cell_end);
+				
+			}
+		}
+	}
+	CollideParticleWithPendulum(baumgarte_factor, index, particle, out_particle, pendulumRadius, pendulumPosition, pendulumLinearVelocity);
+	
+	out_particles[index] = out_particle;
 }
 
 
@@ -407,7 +489,7 @@ void CudaCollidingParticles::InitializeOpenGLVertexBuffer(GLuint buffer_idx)
 	gpuErrchk(cudaGraphicsGLRegisterBuffer(&cGLOutPositions, buffer_idx, cudaGraphicsMapFlagsNone));
 }
 
-void CudaCollidingParticles::UpdateParticles(float dt)
+void CudaCollidingParticles::UpdateParticles(float dt, float pendulumRadius, float3 pendulumPosition, float3 pendulumLinearVelocity)
 {
 	//See "ALGORITHM EXPLANATION" (top of this file) for info on what is meant to be happening here.
 
@@ -486,7 +568,8 @@ void CudaCollidingParticles::UpdateParticles(float dt)
 
 	for (int i = 0; i < 10; ++i)
 	{
-		CollideParticles<<< grid, block >>>(baumgarte_factor, num_particles, particles_ping, particles_pong, grid_cell_start, grid_cell_end);
+		//CollideParticles <<< grid, block >>>(baumgarte_factor, num_particles, particles_ping, particles_pong, grid_cell_start, grid_cell_end); //original
+		CollideParticles<<<grid,block>>>(baumgarte_factor, num_particles, particles_ping, particles_pong, grid_cell_start, grid_cell_end, pendulumRadius, pendulumPosition, pendulumLinearVelocity);
 		std::swap(particles_ping, particles_pong);
 		
 		//Should really do boundary check's here...

@@ -43,7 +43,7 @@ public:
 	void InitializeParticleDam(int dam_width, int dam_height, int dam_depth);
 	void InitializeOpenGLVertexBuffer(GLuint buffer_idx);
 
-	void UpdateParticles(float dt);
+	void UpdateParticles(float dt, float pendulumRadius, float3 pendulumPosition, float3 pendulumLinearVelocity);
 
 protected:
 	uint num_particles;

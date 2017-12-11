@@ -31,7 +31,7 @@ public:
 		//Create Ground
 		this->AddGameObject(BuildCuboidObject("Ground", Vector3(0.0f, -1.0f, 0.0f), Vector3(20.0f, 1.0f, 20.0f), true, 0.0f, true, false, Vector4(0.2f, 0.5f, 1.0f, 1.0f)));
 
-		GameObject *handle, *ball;
+	
 
 		//Create Hanging Ball
 		handle = CommonUtils::BuildSphereObject("",
@@ -102,11 +102,24 @@ public:
 		NCLDebug::AddStatusEntry(Vector4(1.0f, 0.9f, 0.8f, 1.0f), "  with vector's, sorting, iterators and array manipulation.");
 		NCLDebug::AddStatusEntry(Vector4(1.0f, 0.9f, 0.8f, 1.0f), "");
 		NCLDebug::AddStatusEntry(Vector4(1.0f, 0.9f, 0.8f, 1.0f), "  No. Particles: %d", cudaParticleProg->GetNumParticles());
+		float3 tempPos, tempVel;
+		tempPos.x = ball->Physics()->GetPosition().x;
+		tempPos.y = ball->Physics()->GetPosition().y;
+		tempPos.z = ball->Physics()->GetPosition().z;
+		tempVel.x = ball->Physics()->GetLinearVelocity().x;
+		tempVel.y = ball->Physics()->GetLinearVelocity().y;
+		tempVel.z = ball->Physics()->GetLinearVelocity().z;
 
-		cudaParticleProg->UpdateParticles(dt);
+		const float world_dim = PARTICLE_GRID_SIZE * PARTICLE_GRID_CELL_SIZE;
+		const float3 world_offset = make_float3(world_dim * 0.5f, 0.0f, world_dim * 0.5f);
+		tempPos += world_offset;
+
+		cudaParticleProg->UpdateParticles(dt, 0.8f, tempPos, tempVel);
 	}
 
 
 protected:
 	CudaCollidingParticles* cudaParticleProg;
+
+	GameObject *handle, *ball;
 };

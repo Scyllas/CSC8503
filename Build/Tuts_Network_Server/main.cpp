@@ -40,6 +40,11 @@ FOR MORE NETWORKING INFORMATION SEE "Tuts_Network_Client -> Net1_Client.h"
 #include <nclgl\common.h>
 #include <ncltech\NetworkBase.h>
 
+#include <nclgl\OBJMesh.h>
+
+#include <ncltech\MazeGenerator.h>
+#include <ncltech\SearchAStar.h>
+
 //Needed to get computer adapter IPv4 addresses via windows
 #include <iphlpapi.h>
 #pragma comment(lib, "IPHLPAPI.lib")
@@ -84,6 +89,28 @@ int main(int arcg, char** argv)
 	Win32_PrintAllAdapterIPAddresses();
 
 	timer.GetTimedMS();
+
+	MazeGenerator* maze = new MazeGenerator();
+	
+	int grid_size = 16;
+	float density = 0.5f;
+	float weightingG, weightingH;
+	std::string astar_preset_text;
+
+	maze->Generate(grid_size, density);
+
+	Matrix4 maze_scalar = Matrix4::Scale(Vector3(5.f, 5.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
+
+
+	GraphNode* start = maze->GetStartNode();
+	GraphNode* end = maze->GetGoalNode();
+	SearchAStar* search_as = new SearchAStar();
+	weightingG = 1.0f;
+	weightingH = 1.0f;
+	search_as->SetWeightings(weightingG, weightingH);
+	astar_preset_text = "Traditional A-Star";
+	search_as->FindBestPath(start, end);
+
 	while (true)
 	{
 		float dt = timer.GetTimedMS() * 0.001f;
@@ -109,7 +136,7 @@ int main(int arcg, char** argv)
 				break;
 			}
 		});
-		
+
 		//Broadcast update packet to all connected clients at a rate of UPDATE_TIMESTEP updates per second
 		if (accum_time >= UPDATE_TIMESTEP)
 		{
@@ -145,7 +172,7 @@ void Win32_PrintAllAdapterIPAddresses()
 {
 	//Initially allocate 5KB of memory to store all adapter info
 	ULONG outBufLen = 5000;
-	
+
 
 	IP_ADAPTER_INFO* pAdapters = NULL;
 	DWORD status = ERROR_BUFFER_OVERFLOW;
@@ -171,7 +198,7 @@ void Win32_PrintAllAdapterIPAddresses()
 		}
 	}
 
-	
+
 	if (pAdapters != NULL)
 	{
 		//Iterate through all Network Adapters, and print all IPv4 addresses associated with them to the console
@@ -190,5 +217,5 @@ void Win32_PrintAllAdapterIPAddresses()
 
 		free(pAdapters);
 	}
-	
+
 }

@@ -85,6 +85,13 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HungryDinosaur.h" />
+    <ClInclude Include="Scene_Angles.h" />
+    <ClInclude Include="Scene_PathFinding.h" />
+    <ClInclude Include="Scene_PathFollowing.h" />
+    <ClInclude Include="Scene_StateMachine.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

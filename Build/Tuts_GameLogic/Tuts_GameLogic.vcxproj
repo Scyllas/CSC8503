@@ -141,21 +141,6 @@
   <ItemGroup>
     <ClCompile Include="HungryDinosaur.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MazeGenerator.cpp" />
-    <ClCompile Include="MazeRenderer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="MazeGenerator.h" />
-    <ClInclude Include="MazeRenderer.h" />
-    <ClInclude Include="Scene_PathFinding.h" />
-    <ClInclude Include="Scene_Angles.h" />
-    <ClInclude Include="Scene_PathFollowing.h" />
-    <ClInclude Include="Scene_StateMachine.h" />
-    <ClInclude Include="SearchAlgorithm.h" />
-    <ClInclude Include="SearchAStar.h" />
-    <ClInclude Include="SearchBreadthFirst.h" />
-    <ClInclude Include="SearchDepthFirst.h" />
-    <ClInclude Include="HungryDinosaur.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

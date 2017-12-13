@@ -3,6 +3,9 @@
 
 #include <ncltech\Scene.h>
 #include <ncltech\NetworkBase.h>
+#include <nclgl\OBJMesh.h>
+#include <ncltech\MazeRenderer.h>
+#include <ncltech\EnumPackets.h>
 
 //Basic Network Example
 
@@ -18,8 +21,22 @@ public:
 
 	void ProcessNetworkEvent(const ENetEvent& evnt);
 
+	void createMazeFromServer();
+
+
+
 protected:
 	GameObject* box;
+	GameObject* ground;
+	MazeGenerator* maze;
+	MazeRenderer*	mazeRender;
+	Mesh* wallmesh;
+	int grid_size;
+	int maze_size;
+
+	char* isWall;
+
+	Matrix4 maze_scalar;
 
 	NetworkBase network;
 	ENetPeer*	serverConnection;

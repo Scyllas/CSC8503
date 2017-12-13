@@ -45,6 +45,8 @@ FOR MORE NETWORKING INFORMATION SEE "Tuts_Network_Client -> Net1_Client.h"
 #include <ncltech\MazeGenerator.h>
 #include <ncltech\SearchAStar.h>
 
+#include <ncltech\EnumPackets.h>
+
 //Needed to get computer adapter IPv4 addresses via windows
 #include <iphlpapi.h>
 #pragma comment(lib, "IPHLPAPI.lib")
@@ -58,8 +60,13 @@ GameTimer timer;
 float accum_time = 0.0f;
 float rotation = 0.0f;
 
+int grid_size = 16;
+float density = 0.5f;
+float weightingG, weightingH;
+
 
 void Win32_PrintAllAdapterIPAddresses();
+void createMaze();
 
 int onExit(int exitcode)
 {
@@ -90,26 +97,7 @@ int main(int arcg, char** argv)
 
 	timer.GetTimedMS();
 
-	MazeGenerator* maze = new MazeGenerator();
-	
-	int grid_size = 16;
-	float density = 0.5f;
-	float weightingG, weightingH;
-	std::string astar_preset_text;
 
-	maze->Generate(grid_size, density);
-
-	Matrix4 maze_scalar = Matrix4::Scale(Vector3(5.f, 5.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
-
-
-	GraphNode* start = maze->GetStartNode();
-	GraphNode* end = maze->GetGoalNode();
-	SearchAStar* search_as = new SearchAStar();
-	weightingG = 1.0f;
-	weightingH = 1.0f;
-	search_as->SetWeightings(weightingG, weightingH);
-	astar_preset_text = "Traditional A-Star";
-	search_as->FindBestPath(start, end);
 
 	while (true)
 	{
@@ -151,14 +139,18 @@ int main(int arcg, char** argv)
 				1.5f,
 				sin(rotation) * 2.0f);
 
+			vector3Packet temp;
+			temp.vec = pos;
 			//Create the packet and broadcast it (unreliable transport) to all clients
-			ENetPacket* position_update = enet_packet_create(&pos, sizeof(Vector3), 0);
+			ENetPacket* position_update = enet_packet_create(&temp, sizeof(vector3Packet), 0);
 			enet_host_broadcast(server.m_pNetwork, 0, position_update);
+
+			createMaze();
 		}
 
 		Sleep(0);
 	}
-
+	
 	system("pause");
 	server.Release();
 }
@@ -217,5 +209,52 @@ void Win32_PrintAllAdapterIPAddresses()
 
 		free(pAdapters);
 	}
+
+}
+
+void createMaze() {
+
+
+	MazeGenerator* maze = new MazeGenerator();
+
+
+	std::string astar_preset_text;
+
+	maze->Generate(grid_size, density);
+	const int mazeSize = (maze->GetSize() * (maze->GetSize() - 1) * 2);
+
+	GraphNode* start = maze->GetStartNode();
+	GraphNode* end = maze->GetGoalNode();
+	SearchAStar* search_as = new SearchAStar();
+	weightingG = 1.0f;
+	weightingH = 1.0f;
+	search_as->SetWeightings(weightingG, weightingH);
+	astar_preset_text = "Traditional A-Star";
+	search_as->FindBestPath(start, end);
+
+	mazeVarPacket mazeInfo;
+	mazeInfo.gridSize = grid_size;
+	mazeInfo.size = mazeSize;
+
+	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), 0);
+	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
+
+
+	char* isWall = new char[mazeSize];
+	for (int i = 0; i < mazeSize; i++) {
+		if (maze->allEdges[i]._iswall) {
+			isWall[i] = '1';
+		}
+		else {
+			isWall[i] = '0';
+		}
+	}
+
+	mazeWallPacket mazeWallInfo;
+	mazeWallInfo.mazeWall = isWall;
+	ENetPacket* send_mazeWall_info = enet_packet_create(&mazeWallInfo, sizeof(mazeWallPacket), 0);
+	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);
+
+	delete isWall;
 
 }

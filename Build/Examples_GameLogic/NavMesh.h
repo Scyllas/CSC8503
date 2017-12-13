@@ -1,7 +1,7 @@
 #pragma once
-#include <nclgl\common.h>
-#include <nclgl\Vector3.h>
-#include <nclgl\Matrix4.h>
+#include "common.h"
+#include "Vector3.h"
+#include "Matrix4.h"
 #include <string>
 #include <vector>
 

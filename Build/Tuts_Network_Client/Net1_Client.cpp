@@ -20,8 +20,8 @@ Description:
 
 
 This demo scene will demonstrate a very simple network example, with a single server
-and multiple clients. The client will attempt to connect to the server, and say "Hellooo!" 
-if it successfully connects. The server, will continually broadcast a packet containing a 
+and multiple clients. The client will attempt to connect to the server, and say "Hellooo!"
+if it successfully connects. The server, will continually broadcast a packet containing a
 Vector3 position to all connected clients informing them where to place the server's player.
 
 This designed as an example of how to setup networked communication between clients, it is
@@ -47,7 +47,7 @@ produce satisfactory results on the networked peers.
 	values.
 
 	2. Packet Loss
-		This causes the object to jump in large (and VERY noticable) gaps from one position to 
+		This causes the object to jump in large (and VERY noticable) gaps from one position to
 		another.
 
 	   A good place to start in compensating for this is to build a buffer and store the
@@ -72,7 +72,7 @@ produce satisfactory results on the networked peers.
 	   the instances are desyncrhonised. If player 1 shoots and and player 2 moves at the same time, does
 	   player 1 hit player 2? On player 1's screen he/she does, but on player 2's screen he/she gets
 	   hit. This leads to issues which the server has to decipher on it's own, this will also happen
-	   alot with generic physical elements which will ocasional 'snap' back to it's actual position on 
+	   alot with generic physical elements which will ocasional 'snap' back to it's actual position on
 	   the servers game simulation. This methodology is known as "Dead Reckoning".
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -89,6 +89,8 @@ produce satisfactory results on the networked peers.
 
 const Vector3 status_color3 = Vector3(1.0f, 0.6f, 0.6f);
 const Vector4 status_color = Vector4(status_color3.x, status_color3.y, status_color3.z, 1.0f);
+const Vector3 pos_maze1 = Vector3(-3.f, 0.f, -3.f);
+
 
 Net1_Client::Net1_Client(const std::string& friendly_name)
 	: Scene(friendly_name)
@@ -121,7 +123,7 @@ void Net1_Client::OnInitializeScene()
 		Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 	this->AddGameObject(box);
 
-	GameObject* ground = CommonUtils::BuildCuboidObject(
+	ground = CommonUtils::BuildCuboidObject(
 		"Ground",
 		Vector3(0.0f, -1.0f, 0.0f),
 		Vector3(20.0f, 1.0f, 20.0f),
@@ -131,6 +133,21 @@ void Net1_Client::OnInitializeScene()
 		false,
 		Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 	this->AddGameObject(ground);
+
+	wallmesh = new OBJMesh(MESHDIR"cube.obj");
+	maze = new MazeGenerator();
+
+	GLuint whitetex;
+	glGenTextures(1, &whitetex);
+	glBindTexture(GL_TEXTURE_2D, whitetex);
+	unsigned int pixel = 0xFFFFFFFF;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	wallmesh->SetTexture(whitetex);
+
+	maze_scalar = Matrix4::Scale(Vector3(5.f, 5.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
+
 }
 
 void Net1_Client::OnCleanupScene()
@@ -171,55 +188,91 @@ void Net1_Client::OnUpdateScene(float dt)
 	NCLDebug::DrawTextWs(box->Physics()->GetPosition() + Vector3(0.f, 0.6f, 0.f), STATUS_TEXT_SIZE, TEXTALIGN_CENTRE, Vector4(0.f, 0.f, 0.f, 1.f),
 		"Peer: %u.%u.%u.%u:%u", ip1, ip2, ip3, ip4, serverConnection->address.port);
 
-	
+
 	NCLDebug::AddStatusEntry(status_color, "Network Traffic");
 	NCLDebug::AddStatusEntry(status_color, "    Incoming: %5.2fKbps", network.m_IncomingKb);
 	NCLDebug::AddStatusEntry(status_color, "    Outgoing: %5.2fKbps", network.m_OutgoingKb);
+
+	createMazeFromServer();
+
+
 }
 
 void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 {
 	switch (evnt.type)
 	{
-	//New connection request or an existing peer accepted our connection request
+		//New connection request or an existing peer accepted our connection request
 	case ENET_EVENT_TYPE_CONNECT:
+	{
+		if (evnt.peer == serverConnection)
 		{
-			if (evnt.peer == serverConnection)
-			{
-				NCLDebug::Log(status_color3, "Network: Successfully connected to server!");
+			NCLDebug::Log(status_color3, "Network: Successfully connected to server!");
 
-				//Send a 'hello' packet
-				char* text_data = "Hellooo!";
-				ENetPacket* packet = enet_packet_create(text_data, strlen(text_data) + 1, 0);
-				enet_peer_send(serverConnection, 0, packet);
-			}	
+			//Send a 'hello' packet
+			char* text_data = "Hellooo!";
+			ENetPacket* packet = enet_packet_create(text_data, strlen(text_data) + 1, 0);
+			enet_peer_send(serverConnection, 0, packet);
 		}
-		break;
+	}
+	break;
 
 
 	//Server has sent us a new packet
 	case ENET_EVENT_TYPE_RECEIVE:
+	{
+		if (evnt.packet->dataLength == sizeof(vector3Packet) && evnt.packet->data[0] == boxVector)
 		{
-			if (evnt.packet->dataLength == sizeof(Vector3))
-			{
-				Vector3 pos;
-				memcpy(&pos, evnt.packet->data, sizeof(Vector3));
-				box->Physics()->SetPosition(pos);
-			}
-			else
-			{
-				NCLERROR("Recieved Invalid Network Packet!");
-			}
-
+			vector3Packet pos;
+			memcpy(&pos, evnt.packet->data, sizeof(vector3Packet));
+			box->Physics()->SetPosition(pos.vec);
 		}
-		break;
+		else if (evnt.packet->dataLength == sizeof(mazeVarPacket) && evnt.packet->data[0] == mazeVariables)
+		{
+			mazeVarPacket temp;
+			memcpy(&temp, evnt.packet->data, sizeof(mazeVarPacket));
+			grid_size = temp.gridSize;
+			maze_size = temp.size;
+		}
+		else if (evnt.packet->dataLength == sizeof(mazeWallPacket) && evnt.packet->data[0] == mazeWalls)
+		{
+			mazeWallPacket wall;
+			memcpy(&wall, evnt.packet->data, sizeof(mazeWallPacket));
+			isWall = wall.mazeWall;
+		}
+		else
+		{
+			NCLERROR("Recieved Invalid Network Packet!");
+		}
+
+	}
+	break;
 
 
 	//Server has disconnected
 	case ENET_EVENT_TYPE_DISCONNECT:
-		{
-			NCLDebug::Log(status_color3, "Network: Server has disconnected!");
-		}
-		break;
+	{
+		NCLDebug::Log(status_color3, "Network: Server has disconnected!");
 	}
+	break;
+	}
+}
+
+void Net1_Client::createMazeFromServer() {
+
+	maze->size = grid_size;
+
+	for (int i = 0; i < maze_size; i++) {
+		maze->allNodes[i] = GraphNode();
+		if (isWall[i] == '1') {
+		maze->allEdges[i]._iswall = true;
+		}
+		else {
+			maze->allEdges[i]._iswall = false;
+		}
+	}
+
+	mazeRender = new MazeRenderer(maze, wallmesh);
+	mazeRender->Render()->SetTransform(Matrix4::Translation(pos_maze1) * maze_scalar);
+	this->AddGameObject(mazeRender);
 }

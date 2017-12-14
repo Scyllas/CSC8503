@@ -20,12 +20,12 @@ struct mazeVarPacket {
 
 	int ID = mazeVariables;
 	int gridSize;
-	int size;
-
+	int arraySize;
+	float density;
 };
 struct mazeWallPacket {
 
 	int ID = mazeWalls;
-	char* mazeWall;
+	string mazeWall;
 
 };

@@ -135,7 +135,7 @@ void Net1_Client::OnInitializeScene()
 	this->AddGameObject(ground);
 
 	wallmesh = new OBJMesh(MESHDIR"cube.obj");
-	maze = new MazeGenerator();
+
 
 	GLuint whitetex;
 	glGenTextures(1, &whitetex);
@@ -193,7 +193,9 @@ void Net1_Client::OnUpdateScene(float dt)
 	NCLDebug::AddStatusEntry(status_color, "    Incoming: %5.2fKbps", network.m_IncomingKb);
 	NCLDebug::AddStatusEntry(status_color, "    Outgoing: %5.2fKbps", network.m_OutgoingKb);
 
-	createMazeFromServer();
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_G)) {
+		createMazeFromServer();
+	}
 
 
 }
@@ -232,13 +234,13 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 			mazeVarPacket temp;
 			memcpy(&temp, evnt.packet->data, sizeof(mazeVarPacket));
 			grid_size = temp.gridSize;
-			maze_size = temp.size;
+			maze_size = temp.arraySize;
+			density = temp.density;
 		}
 		else if (evnt.packet->dataLength == sizeof(mazeWallPacket) && evnt.packet->data[0] == mazeWalls)
 		{
 			mazeWallPacket wall;
 			memcpy(&wall, evnt.packet->data, sizeof(mazeWallPacket));
-			isWall = wall.mazeWall;
 		}
 		else
 		{
@@ -260,12 +262,15 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 
 void Net1_Client::createMazeFromServer() {
 
-	maze->size = grid_size;
+	maze = new MazeGenerator();
+
+	maze->Generate(grid_size, density);
+
+
 
 	for (int i = 0; i < maze_size; i++) {
-		maze->allNodes[i] = GraphNode();
-		if (isWall[i] == '1') {
-		maze->allEdges[i]._iswall = true;
+		if (isWallChar[i] == '1') {
+			maze->allEdges[i]._iswall = true;
 		}
 		else {
 			maze->allEdges[i]._iswall = false;

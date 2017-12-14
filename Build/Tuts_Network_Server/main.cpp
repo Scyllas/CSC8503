@@ -234,27 +234,28 @@ void createMaze() {
 
 	mazeVarPacket mazeInfo;
 	mazeInfo.gridSize = grid_size;
-	mazeInfo.size = mazeSize;
+	mazeInfo.arraySize = mazeSize;
+	mazeInfo.density = density;
 
 	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), 0);
 	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
 
 
-	char* isWall = new char[mazeSize];
+	string isWall = "";
 	for (int i = 0; i < mazeSize; i++) {
 		if (maze->allEdges[i]._iswall) {
-			isWall[i] = '1';
+			isWall += '1';
 		}
 		else {
-			isWall[i] = '0';
+			isWall += '0';
 		}
+		
 	}
-
+	cout << isWall << endl;
 	mazeWallPacket mazeWallInfo;
 	mazeWallInfo.mazeWall = isWall;
 	ENetPacket* send_mazeWall_info = enet_packet_create(&mazeWallInfo, sizeof(mazeWallPacket), 0);
 	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);
 
-	delete isWall;
 
 }

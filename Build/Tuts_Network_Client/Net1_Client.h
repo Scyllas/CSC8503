@@ -33,8 +33,9 @@ protected:
 	Mesh* wallmesh;
 	int grid_size;
 	int maze_size;
+	float density;
 
-	char* isWall;
+	char* isWallChar;
 
 	Matrix4 maze_scalar;
 

@@ -150,7 +150,7 @@ int main(int arcg, char** argv)
 
 		Sleep(0);
 	}
-	
+
 	system("pause");
 	server.Release();
 }
@@ -240,22 +240,57 @@ void createMaze() {
 	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), 0);
 	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
 
+	//const int wallRows = mazeSize / 8;
+	//int temp = NULL;
+	//int temp2 = NULL;
+	//int current = NULL;
+	//int concatCount = 0;
+	//int* walls = new int[wallRows];
+	//int wallIndex = 0;
 
-	string isWall = "";
+	//for (int i = 0; i < mazeSize; i++) {
+	//	current = temp2;
+	//	//ensure my ints have only 8 bytes
+	//	if (concatCount >= 7) {
+	//		//allocate a full int to the array
+	//		walls[wallIndex] = temp;
+	//		//clear the int
+	//		temp = NULL;
+	//		//move to the next array pos
+	//		wallIndex++;
+	//		//restart the int count
+	//		concatCount = 0;
+	//	}
+	//	if (maze->allEdges[i]._iswall) {
+	//		//append a 1 to the int
+	//		temp = 0b1;
+	//	}
+	//	else {
+	//		//append a 0 to the int
+	//		temp = 0b0;
+	//	}
+	//	//bitwise the int onto the end of the
+	//	current |= (1UL << temp);
+	//	//increment the int count
+	//	concatCount++;
+	//}
+
+	
+	bool* temp;
 	for (int i = 0; i < mazeSize; i++) {
 		if (maze->allEdges[i]._iswall) {
-			isWall += '1';
+			temp[i] = true;
 		}
 		else {
-			isWall += '0';
+			temp[i] = false;
 		}
-		
 	}
-	cout << isWall << endl;
+
 	mazeWallPacket mazeWallInfo;
-	mazeWallInfo.mazeWall = isWall;
-	ENetPacket* send_mazeWall_info = enet_packet_create(&mazeWallInfo, sizeof(mazeWallPacket), 0);
+	mazeWallInfo.mazeSize = mazeSize;
+	mazeWallInfo.mazeWall = temp;
+	ENetPacket* send_mazeWall_info = enet_packet_create(&mazeWallInfo, sizeof(mazeWallPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);
 
-
+	//delete walls;
 }

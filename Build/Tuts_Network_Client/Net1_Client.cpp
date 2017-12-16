@@ -241,6 +241,7 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 		{
 			mazeWallPacket wall;
 			memcpy(&wall, evnt.packet->data, sizeof(mazeWallPacket));
+			int i = 0;
 		}
 		else
 		{

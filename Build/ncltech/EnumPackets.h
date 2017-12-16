@@ -23,9 +23,11 @@ struct mazeVarPacket {
 	int arraySize;
 	float density;
 };
+
 struct mazeWallPacket {
 
 	int ID = mazeWalls;
-	string mazeWall;
+	const int mazeSize;
+	bool* mazeWall;
 
 };

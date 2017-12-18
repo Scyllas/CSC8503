@@ -89,7 +89,7 @@ produce satisfactory results on the networked peers.
 
 const Vector3 status_color3 = Vector3(1.0f, 0.6f, 0.6f);
 const Vector4 status_color = Vector4(status_color3.x, status_color3.y, status_color3.z, 1.0f);
-const Vector3 pos_maze1 = Vector3(-3.f, 0.f, -3.f);
+const Vector3 pos_maze1 = Vector3(0.f, 5.f, 0.f);
 
 
 Net1_Client::Net1_Client(const std::string& friendly_name)
@@ -146,7 +146,6 @@ void Net1_Client::OnInitializeScene()
 
 	wallmesh->SetTexture(whitetex);
 
-	maze_scalar = Matrix4::Scale(Vector3(5.f, 5.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
 
 }
 
@@ -194,9 +193,15 @@ void Net1_Client::OnUpdateScene(float dt)
 	NCLDebug::AddStatusEntry(status_color, "    Outgoing: %5.2fKbps", network.m_OutgoingKb);
 
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_G)) {
-		createMazeFromServer();
+		makeMazePacket mazePacket;
+		mazePacket.toggle = true;
+		ENetPacket* packet = enet_packet_create(&mazePacket, sizeof(makeMazePacket), ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(serverConnection, 0, packet);
 	}
-
+	if (canBuild == true) {
+		createMazeFromServer();
+		canBuild = false;
+	}
 
 }
 
@@ -236,12 +241,24 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 			grid_size = temp.gridSize;
 			maze_size = temp.arraySize;
 			density = temp.density;
+			maze_scalar = Matrix4::Scale(Vector3(5.f, 20.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
+
 		}
 		else if (evnt.packet->dataLength == sizeof(mazeWallPacket) && evnt.packet->data[0] == mazeWalls)
 		{
 			mazeWallPacket wall;
 			memcpy(&wall, evnt.packet->data, sizeof(mazeWallPacket));
-			int i = 0;
+			isWall = new bool[wall.mazeSize];
+			for (int i = 0; i < wall.mazeSize; i++) {
+
+				isWall[i] = wall.mazeWall[i];
+			}
+		}
+		else if (evnt.packet->dataLength == sizeof(aStarPacket) && evnt.packet->data[0] == astar)
+		{
+			aStarPacket temp;
+			memcpy(&temp, evnt.packet->data, sizeof(aStarPacket));
+
 		}
 		else
 		{
@@ -263,6 +280,8 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 
 void Net1_Client::createMazeFromServer() {
 
+	this->DeleteAllGameObjects();
+
 	maze = new MazeGenerator();
 
 	maze->Generate(grid_size, density);
@@ -270,13 +289,22 @@ void Net1_Client::createMazeFromServer() {
 
 
 	for (int i = 0; i < maze_size; i++) {
-		if (isWallChar[i] == '1') {
+		if (isWall[i] == true) {
 			maze->allEdges[i]._iswall = true;
 		}
 		else {
 			maze->allEdges[i]._iswall = false;
 		}
 	}
+
+	start = maze->GetStartNode();
+	end = maze->GetGoalNode();
+	graphNodePacket nodes;
+	nodes.start_node = start;
+	nodes.end_node = end;
+
+	ENetPacket* packet = enet_packet_create(&nodes, sizeof(graphNodePacket), ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(serverConnection, 0, packet);
 
 	mazeRender = new MazeRenderer(maze, wallmesh);
 	mazeRender->Render()->SetTransform(Matrix4::Translation(pos_maze1) * maze_scalar);

@@ -30,12 +30,16 @@ protected:
 	GameObject* ground;
 	MazeGenerator* maze;
 	MazeRenderer*	mazeRender;
-	Mesh* wallmesh;
-	int grid_size;
-	int maze_size;
-	float density;
+	GraphNode* start;
+	GraphNode* end;
 
-	char* isWallChar;
+	Mesh* wallmesh;
+	int grid_size = 1;
+	int maze_size = 1;
+	float density = 0.5f;
+
+	bool* isWall;
+	bool canBuild = false;
 
 	Matrix4 maze_scalar;
 

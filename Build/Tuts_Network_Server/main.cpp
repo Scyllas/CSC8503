@@ -64,9 +64,19 @@ int grid_size = 16;
 float density = 0.5f;
 float weightingG, weightingH;
 
+int astar_preset_idx;
+
+bool mazeToggle = false;
+std::string astar_preset_text;
+
+SearchAStar* search_as;
+
+MazeGenerator* maze = new MazeGenerator();
+
 
 void Win32_PrintAllAdapterIPAddresses();
 void createMaze();
+void UpdateAStarPreset();
 
 int onExit(int exitcode)
 {
@@ -115,7 +125,21 @@ int main(int arcg, char** argv)
 				break;
 
 			case ENET_EVENT_TYPE_RECEIVE:
-				printf("\t Client %d says: %s\n", evnt.peer->incomingPeerID, evnt.packet->data);
+				if (evnt.packet->dataLength == sizeof(graphNodePacket) && evnt.packet->data[0] == graph)
+				{
+					graphNodePacket packet;
+					memcpy(&packet, evnt.packet->data, sizeof(graphNodePacket));
+					UpdateAStarPreset();
+				}
+				else if (evnt.packet->dataLength == sizeof(makeMazePacket) && evnt.packet->data[0] == create)
+				{
+					makeMazePacket packet;
+					memcpy(&packet, evnt.packet->data, sizeof(graphNodePacket));
+					mazeToggle = packet.toggle;
+				}
+				else {
+					printf("\t Client %d says: %s\n", evnt.peer->incomingPeerID, evnt.packet->data);
+				}
 				enet_packet_destroy(evnt.packet);
 				break;
 
@@ -145,9 +169,13 @@ int main(int arcg, char** argv)
 			ENetPacket* position_update = enet_packet_create(&temp, sizeof(vector3Packet), 0);
 			enet_host_broadcast(server.m_pNetwork, 0, position_update);
 
-			createMaze();
-		}
 
+		}
+		if (mazeToggle = true) {
+			createMaze();
+			mazeToggle = false;
+		}
+		
 		Sleep(0);
 	}
 
@@ -215,7 +243,7 @@ void Win32_PrintAllAdapterIPAddresses()
 void createMaze() {
 
 
-	MazeGenerator* maze = new MazeGenerator();
+	
 
 
 	std::string astar_preset_text;
@@ -237,7 +265,7 @@ void createMaze() {
 	mazeInfo.arraySize = mazeSize;
 	mazeInfo.density = density;
 
-	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), 0);
+	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
 
 	//const int wallRows = mazeSize / 8;
@@ -275,22 +303,68 @@ void createMaze() {
 	//	concatCount++;
 	//}
 
-	
-	bool* temp;
+	mazeWallPacket mazeWallInfo;
+
 	for (int i = 0; i < mazeSize; i++) {
 		if (maze->allEdges[i]._iswall) {
-			temp[i] = true;
+			mazeWallInfo.mazeWall[i] = true;
 		}
 		else {
-			temp[i] = false;
+			mazeWallInfo.mazeWall[i] = false;
 		}
 	}
 
-	mazeWallPacket mazeWallInfo;
+
 	mazeWallInfo.mazeSize = mazeSize;
-	mazeWallInfo.mazeWall = temp;
+
 	ENetPacket* send_mazeWall_info = enet_packet_create(&mazeWallInfo, sizeof(mazeWallPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);
 
-	//delete walls;
+}
+
+void UpdateAStarPreset()
+{
+	//Example presets taken from:
+	// http://movingai.com/astar-var.html
+	float weightingG, weightingH;
+	switch (astar_preset_idx)
+	{
+	default:
+	case 0:
+		//Only distance from the start node matters - fans out from start node
+		weightingG = 1.0f;
+		weightingH = 0.0f;
+		astar_preset_text = "Dijkstra - None heuristic search";
+		break;
+	case 1:
+		//Only distance to the end node matters
+		weightingG = 0.0f;
+		weightingH = 1.0f;
+		astar_preset_text = "Pure Hueristic search";
+		break;
+	case 2:
+		//Equal weighting
+		weightingG = 1.0f;
+		weightingH = 1.0f;
+		astar_preset_text = "Traditional A-Star";
+		break;
+	case 3:
+		//Greedily goes towards the goal node where possible, but still cares about distance travelled a little bit
+		weightingG = 1.0f;
+		weightingH = 2.0f;
+		astar_preset_text = "Weighted Greedy A-Star";
+		break;
+	}
+	search_as->SetWeightings(weightingG, weightingH);
+
+	GraphNode* start = maze->GetStartNode();
+	GraphNode* end = maze->GetGoalNode();
+	search_as->FindBestPath(start, end);
+
+	aStarPacket astar;
+	astar.astarPath = *search_as;
+
+	ENetPacket* send_mazeWall_info = enet_packet_create(&astar, sizeof(aStarPacket), ENET_PACKET_FLAG_RELIABLE);
+	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);
+
 }

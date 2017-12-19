@@ -2,6 +2,9 @@
 #include <nclgl\Vector3.h>
 #include <ncltech\SearchAStar.h>
 
+
+static int playerCount = 0;
+
 enum PacketsID
 {
 	boxVector = 0,
@@ -9,7 +12,8 @@ enum PacketsID
 	mazeWalls = 2,
 	astar = 3,
 	graph = 4,
-	create = 5
+	create = 5,
+	player = 6
 
 };
 
@@ -40,7 +44,8 @@ struct mazeWallPacket {
 struct aStarPacket {
 
 	int ID = astar;
-	SearchAStar astarPath;
+	SearchAStar* astarPath;
+	bool toggle = true;
 };
 
 struct graphNodePacket {
@@ -49,8 +54,14 @@ struct graphNodePacket {
 	GraphNode* end_node;
 };
 
-struct makeMazePacket{
+struct makeMazePacket {
 	int ID = create;
 	bool toggle = true;
 
+};
+
+struct playerPacket {
+	int ID = player;
+	int playerNo;
+	GameObject* playerModel;
 };

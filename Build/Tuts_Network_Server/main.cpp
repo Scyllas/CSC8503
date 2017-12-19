@@ -65,14 +65,19 @@ float density = 0.5f;
 float weightingG, weightingH;
 
 int astar_preset_idx;
+int print_count = 0;
 
 bool mazeToggle = false;
 std::string astar_preset_text;
 
-SearchAStar* search_as;
+SearchAStar* search_as = new SearchAStar();
 
 MazeGenerator* maze = new MazeGenerator();
+GraphNode* startNode;
+GraphNode* endNode;
 
+const Vector3 status_color3 = Vector3(1.0f, 0.6f, 0.6f);
+const Vector4 status_color = Vector4(status_color3.x, status_color3.y, status_color3.z, 1.0f);
 
 void Win32_PrintAllAdapterIPAddresses();
 void createMaze();
@@ -134,7 +139,7 @@ int main(int arcg, char** argv)
 				else if (evnt.packet->dataLength == sizeof(makeMazePacket) && evnt.packet->data[0] == create)
 				{
 					makeMazePacket packet;
-					memcpy(&packet, evnt.packet->data, sizeof(graphNodePacket));
+					memcpy(&packet, evnt.packet->data, sizeof(makeMazePacket));
 					mazeToggle = packet.toggle;
 				}
 				else {
@@ -152,7 +157,13 @@ int main(int arcg, char** argv)
 		//Broadcast update packet to all connected clients at a rate of UPDATE_TIMESTEP updates per second
 		if (accum_time >= UPDATE_TIMESTEP)
 		{
-
+			if (print_count >= 30) {
+				printf("Incoming: %5.2fKbps, Outgoing: %5.2fKbps\n", server.m_IncomingKb, server.m_OutgoingKb);
+				print_count = 0;
+			}
+			else {
+				print_count++;
+			}
 			//Packet data
 			// - At the moment this is just a position update that rotates around the origin of the world
 			//   though this can be any variable, structure or class you wish. Just remember that everything 
@@ -171,11 +182,13 @@ int main(int arcg, char** argv)
 
 
 		}
-		if (mazeToggle = true) {
+		if (mazeToggle == true) {
 			createMaze();
 			mazeToggle = false;
 		}
 		
+		
+
 		Sleep(0);
 	}
 
@@ -250,15 +263,6 @@ void createMaze() {
 
 	maze->Generate(grid_size, density);
 	const int mazeSize = (maze->GetSize() * (maze->GetSize() - 1) * 2);
-
-	GraphNode* start = maze->GetStartNode();
-	GraphNode* end = maze->GetGoalNode();
-	SearchAStar* search_as = new SearchAStar();
-	weightingG = 1.0f;
-	weightingH = 1.0f;
-	search_as->SetWeightings(weightingG, weightingH);
-	astar_preset_text = "Traditional A-Star";
-	search_as->FindBestPath(start, end);
 
 	mazeVarPacket mazeInfo;
 	mazeInfo.gridSize = grid_size;
@@ -357,12 +361,13 @@ void UpdateAStarPreset()
 	}
 	search_as->SetWeightings(weightingG, weightingH);
 
-	GraphNode* start = maze->GetStartNode();
-	GraphNode* end = maze->GetGoalNode();
-	search_as->FindBestPath(start, end);
+	startNode = maze->GetStartNode();
+	endNode = maze->GetGoalNode();
+
+	search_as->FindBestPath(startNode, endNode);
 
 	aStarPacket astar;
-	astar.astarPath = *search_as;
+	astar.astarPath = search_as;
 
 	ENetPacket* send_mazeWall_info = enet_packet_create(&astar, sizeof(aStarPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);

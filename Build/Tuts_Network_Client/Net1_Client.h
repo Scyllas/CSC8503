@@ -25,21 +25,27 @@ public:
 
 
 
+
 protected:
 	GameObject* box;
+	GameObject* player;
 	GameObject* ground;
 	MazeGenerator* maze;
 	MazeRenderer*	mazeRender;
 	GraphNode* start;
 	GraphNode* end;
 
+	SearchAStar* search_as;
+
 	Mesh* wallmesh;
+	int playerNum;
 	int grid_size = 1;
 	int maze_size = 1;
 	float density = 0.5f;
 
 	bool* isWall;
 	bool canBuild = false;
+	bool drawAstar = false;
 
 	Matrix4 maze_scalar;
 

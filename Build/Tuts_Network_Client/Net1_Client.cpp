@@ -97,6 +97,9 @@ Net1_Client::Net1_Client(const std::string& friendly_name)
 	, serverConnection(NULL)
 	, box(NULL)
 {
+	//give each client a unique ID, specific to their version of said client
+	playerNum = playerCount;
+	playerCount++;
 }
 
 void Net1_Client::OnInitializeScene()
@@ -121,7 +124,7 @@ void Net1_Client::OnInitializeScene()
 		false,
 		false,
 		Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-	this->AddGameObject(box);
+	//
 
 	ground = CommonUtils::BuildCuboidObject(
 		"Ground",
@@ -132,7 +135,7 @@ void Net1_Client::OnInitializeScene()
 		false,
 		false,
 		Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-	this->AddGameObject(ground);
+	
 
 	wallmesh = new OBJMesh(MESHDIR"cube.obj");
 
@@ -146,7 +149,8 @@ void Net1_Client::OnInitializeScene()
 
 	wallmesh->SetTexture(whitetex);
 
-
+	//this->AddGameObject(box);
+	//this->AddGameObject(ground);
 }
 
 void Net1_Client::OnCleanupScene()
@@ -184,8 +188,8 @@ void Net1_Client::OnUpdateScene(float dt)
 	uint8_t ip3 = (serverConnection->address.host >> 16) & 0xFF;
 	uint8_t ip4 = (serverConnection->address.host >> 24) & 0xFF;
 
-	NCLDebug::DrawTextWs(box->Physics()->GetPosition() + Vector3(0.f, 0.6f, 0.f), STATUS_TEXT_SIZE, TEXTALIGN_CENTRE, Vector4(0.f, 0.f, 0.f, 1.f),
-		"Peer: %u.%u.%u.%u:%u", ip1, ip2, ip3, ip4, serverConnection->address.port);
+	/*NCLDebug::DrawTextWs(box->Physics()->GetPosition() + Vector3(0.f, 0.6f, 0.f), STATUS_TEXT_SIZE, TEXTALIGN_CENTRE, Vector4(0.f, 0.f, 0.f, 1.f),
+		"Peer: %u.%u.%u.%u:%u", ip1, ip2, ip3, ip4, serverConnection->address.port);*/
 
 
 	NCLDebug::AddStatusEntry(status_color, "Network Traffic");
@@ -202,7 +206,10 @@ void Net1_Client::OnUpdateScene(float dt)
 		createMazeFromServer();
 		canBuild = false;
 	}
+	if (drawAstar == true) {
+		mazeRender->DrawSearchHistory(search_as->GetSearchHistory(), 2.5f / float(grid_size));
 
+	}
 }
 
 void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
@@ -232,7 +239,7 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 		{
 			vector3Packet pos;
 			memcpy(&pos, evnt.packet->data, sizeof(vector3Packet));
-			box->Physics()->SetPosition(pos.vec);
+			//box->Physics()->SetPosition(pos.vec);
 		}
 		else if (evnt.packet->dataLength == sizeof(mazeVarPacket) && evnt.packet->data[0] == mazeVariables)
 		{
@@ -241,6 +248,7 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 			grid_size = temp.gridSize;
 			maze_size = temp.arraySize;
 			density = temp.density;
+			canBuild = temp.toggle;
 			maze_scalar = Matrix4::Scale(Vector3(5.f, 20.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
 
 		}
@@ -258,7 +266,7 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 		{
 			aStarPacket temp;
 			memcpy(&temp, evnt.packet->data, sizeof(aStarPacket));
-
+			search_as = temp.astarPath;
 		}
 		else
 		{
@@ -308,5 +316,24 @@ void Net1_Client::createMazeFromServer() {
 
 	mazeRender = new MazeRenderer(maze, wallmesh);
 	mazeRender->Render()->SetTransform(Matrix4::Translation(pos_maze1) * maze_scalar);
+
+	playerPacket player_packet;
+
+	player_packet.playerNo = playerNum;
+
+	string playerName = string("Player %d", playerNum);
+	player = CommonUtils::BuildCuboidObject(
+		playerName,
+		maze->GetStartNode()->_pos,
+		Vector3(0.5f, 1.0f, 0.5f),
+		true,									//Physics Enabled here Purely to make setting position easier via Physics()->SetPosition()
+		0.0f,
+		false,
+		false,
+		Vector4((rand() % 99)/100.0f, (rand() % 99) / 100.0f, (rand() % 99) / 100.0f, 1.0f));
+
 	this->AddGameObject(mazeRender);
+	this->AddGameObject(player);
+
 }
+

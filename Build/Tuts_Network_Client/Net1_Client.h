@@ -23,6 +23,10 @@ public:
 
 	void createMazeFromServer();
 
+	Vector3 ConvertWorldPosition(Vector3 gridPos);
+
+	void velAndPosUpdate();
+
 
 
 
@@ -32,13 +36,15 @@ protected:
 	GameObject* ground;
 	MazeGenerator* maze;
 	MazeRenderer*	mazeRender;
-	GraphNode* start;
-	GraphNode* end;
 
-	SearchAStar* search_as;
+	Vector3* astar_path;
+
+	SearchHistory search_as;
 
 	Mesh* wallmesh;
 	int playerNum;
+	int pathPoint = 0;
+	int path_size = 1;
 	int grid_size = 1;
 	int maze_size = 1;
 	float density = 0.5f;

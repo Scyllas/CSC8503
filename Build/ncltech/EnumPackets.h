@@ -1,7 +1,7 @@
 #pragma once
 #include <nclgl\Vector3.h>
 #include <ncltech\SearchAStar.h>
-
+//#include <ncltech\SearchAlgorithm.h>
 
 static int playerCount = 0;
 
@@ -13,8 +13,9 @@ enum PacketsID
 	astar = 3,
 	graph = 4,
 	create = 5,
-	player = 6
-
+	playerID = 6,
+	playerPos = 7,
+	playerVel = 8
 };
 
 struct vector3Packet {
@@ -31,6 +32,9 @@ struct mazeVarPacket {
 	int gridSize = 1;
 	int arraySize = 1;
 	float density = 0.5f;
+	Vector3 start_node_pos = Vector3();;
+	Vector3 end_node_pos = Vector3();;
+
 };
 
 struct mazeWallPacket {
@@ -42,16 +46,17 @@ struct mazeWallPacket {
 };
 
 struct aStarPacket {
-
 	int ID = astar;
-	SearchAStar* astarPath;
+	int pathSize = 1;
+	Vector3 astarPath[1000];
 	bool toggle = true;
 };
 
 struct graphNodePacket {
 	int ID = graph;
-	GraphNode* start_node;
-	GraphNode* end_node;
+	Vector3 start_node_pos = Vector3();;
+	Vector3 end_node_pos = Vector3();;
+	bool nodesInit = true;
 };
 
 struct makeMazePacket {
@@ -60,8 +65,22 @@ struct makeMazePacket {
 
 };
 
+
 struct playerPacket {
-	int ID = player;
+	int ID = playerID;
 	int playerNo;
-	GameObject* playerModel;
+	Vector3 pos = Vector3();
+	Vector3 vel = Vector3();
+};
+
+struct playerPosPacket {
+	int ID = playerPos;
+	int playerNo;
+	Vector3 pos = Vector3();
+};
+
+struct playerVelPacket {
+	int ID = playerVel;
+	int playerNo;
+	Vector3 vel = Vector3();
 };

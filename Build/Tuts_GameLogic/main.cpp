@@ -8,10 +8,10 @@
 #include <nclgl\NCLDebug.h>
 #include <nclgl\PerfTimer.h>
 
-#include "Scene_PathFinding.h"
-#include "Scene_PathFollowing.h"
-#include "Scene_Angles.h"
-#include "Scene_StateMachine.h"
+#include <ncltech\Scene_PathFinding.h>
+#include <ncltech\Scene_PathFollowing.h>
+#include <ncltech\Scene_Angles.h>
+#include <ncltech\Scene_StateMachine.h>
 
 void Quit(bool error = false, const string &reason = "");
 
@@ -30,7 +30,7 @@ void Initialize()
 
 								//Enqueue All Scenes
 								// - Add any new scenes you want here =D
-	
+
 	SceneManager::Instance()->EnqueueScene(new Scene_PathFollowing("GameLogic Example #1 - Path Following"));
 	SceneManager::Instance()->EnqueueScene(new Scene_Angles("GameLogic Example #2 - Angle Computation"));
 	SceneManager::Instance()->EnqueueScene(new Scene_StateMachine("GameLogic Example #3 - Finite State Machine"));
@@ -82,7 +82,7 @@ void PrintStatusEntries()
 		SceneManager::Instance()->GetCurrentSceneIndex() + 1,
 		SceneManager::Instance()->SceneCount(),
 		SceneManager::Instance()->GetCurrentScene()->GetSceneName().c_str()
-		);
+	);
 }
 
 

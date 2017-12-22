@@ -135,7 +135,7 @@ void Net1_Client::OnInitializeScene()
 		false,
 		false,
 		Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-	
+
 
 	wallmesh = new OBJMesh(MESHDIR"cube.obj");
 
@@ -196,19 +196,27 @@ void Net1_Client::OnUpdateScene(float dt)
 	NCLDebug::AddStatusEntry(status_color, "    Incoming: %5.2fKbps", network.m_IncomingKb);
 	NCLDebug::AddStatusEntry(status_color, "    Outgoing: %5.2fKbps", network.m_OutgoingKb);
 
+
+	//on keypress, start the mechanisms to build a maze
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_G)) {
 		makeMazePacket mazePacket;
 		mazePacket.toggle = true;
+		//send a reliable packet to start off the build sequence
 		ENetPacket* packet = enet_packet_create(&mazePacket, sizeof(makeMazePacket), ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(serverConnection, 0, packet);
 	}
 	if (canBuild == true) {
+		//on returning from the server, build the graphical representation of the maze computed
 		createMazeFromServer();
 		canBuild = false;
 	}
 	if (drawAstar == true) {
-		mazeRender->DrawSearchHistory(search_as->GetSearchHistory(), 2.5f / float(grid_size));
-
+		for (int i = 0; i < path_size - 1; i++) {
+			//draw the best path computed
+			NCLDebug::DrawThickLine(astar_path[i], astar_path[i + 1], 0.5f, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+		}
+		//update the velocities and positions of the clients
+		velAndPosUpdate();
 	}
 }
 
@@ -237,23 +245,57 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 	{
 		if (evnt.packet->dataLength == sizeof(vector3Packet) && evnt.packet->data[0] == boxVector)
 		{
+			//disabled the unused box
 			vector3Packet pos;
 			memcpy(&pos, evnt.packet->data, sizeof(vector3Packet));
 			//box->Physics()->SetPosition(pos.vec);
 		}
+		else if (evnt.packet->dataLength == sizeof(playerPacket) && evnt.packet->data[0] == playerID)
+		{
+			//update player info in 3 dimensions
+			playerPacket play;
+			memcpy(&play, evnt.packet->data, sizeof(playerPacket));
+			player->Physics()->SetPosition(ConvertWorldPosition(play.pos) + Vector3(0, 0.5f, 0));
+			player->Physics()->SetLinearVelocity(play.vel);
+		}
+		else if (evnt.packet->dataLength == sizeof(playerPosPacket) && evnt.packet->data[0] == playerPos)
+		{
+			//update player info in 3 dimensions
+			playerPosPacket pos;
+			memcpy(&pos, evnt.packet->data, sizeof(playerPosPacket));
+			player->Physics()->SetPosition(ConvertWorldPosition(pos.pos) + Vector3(0, 0.5f, 0));
+		}
+		else if (evnt.packet->dataLength == sizeof(playerVelPacket) && evnt.packet->data[0] == playerVel)
+		{
+			playerVelPacket vel;
+			memcpy(&vel, evnt.packet->data, sizeof(playerVelPacket));
+			player->Physics()->SetLinearVelocity(vel.vel);
+		}
 		else if (evnt.packet->dataLength == sizeof(mazeVarPacket) && evnt.packet->data[0] == mazeVariables)
 		{
+			//copy over maze information and instatiate a maze
 			mazeVarPacket temp;
 			memcpy(&temp, evnt.packet->data, sizeof(mazeVarPacket));
 			grid_size = temp.gridSize;
 			maze_size = temp.arraySize;
 			density = temp.density;
 			canBuild = temp.toggle;
-			maze_scalar = Matrix4::Scale(Vector3(5.f, 20.0f / float(grid_size), 5.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
+			maze_scalar = Matrix4::Scale(Vector3(20.f, 20.0f / float(grid_size), 20.f)) * Matrix4::Translation(Vector3(-0.5f, 0.f, -0.5f));
+			maze = new MazeGenerator();
+			maze->Generate(grid_size, density);
+			maze->start->_pos = temp.start_node_pos;
+			maze->end->_pos = temp.end_node_pos;
+		}
+		else if (evnt.packet->dataLength == sizeof(graphNodePacket) && evnt.packet->data[0] == graph)
+		{
+			//depreciated, but has a handler
+			graphNodePacket temp;
+			memcpy(&temp, evnt.packet->data, sizeof(graphNodePacket));
 
 		}
 		else if (evnt.packet->dataLength == sizeof(mazeWallPacket) && evnt.packet->data[0] == mazeWalls)
 		{
+			//copy over which nodes are walls
 			mazeWallPacket wall;
 			memcpy(&wall, evnt.packet->data, sizeof(mazeWallPacket));
 			isWall = new bool[wall.mazeSize];
@@ -264,9 +306,16 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 		}
 		else if (evnt.packet->dataLength == sizeof(aStarPacket) && evnt.packet->data[0] == astar)
 		{
+			//copy over the astar path
 			aStarPacket temp;
 			memcpy(&temp, evnt.packet->data, sizeof(aStarPacket));
-			search_as = temp.astarPath;
+			path_size = temp.pathSize;
+			astar_path = new Vector3[temp.pathSize];
+			for (int i = 0; i < path_size; i++) {
+				astar_path[i] = ConvertWorldPosition(temp.astarPath[i]);
+			}
+			drawAstar = temp.toggle;
+			player->Physics()->SetPosition(maze->start->_pos);
 		}
 		else
 		{
@@ -288,14 +337,7 @@ void Net1_Client::ProcessNetworkEvent(const ENetEvent& evnt)
 
 void Net1_Client::createMazeFromServer() {
 
-	this->DeleteAllGameObjects();
-
-	maze = new MazeGenerator();
-
-	maze->Generate(grid_size, density);
-
-
-
+	//replace randomly generated walls with the server ones
 	for (int i = 0; i < maze_size; i++) {
 		if (isWall[i] == true) {
 			maze->allEdges[i]._iswall = true;
@@ -305,35 +347,93 @@ void Net1_Client::createMazeFromServer() {
 		}
 	}
 
-	start = maze->GetStartNode();
-	end = maze->GetGoalNode();
+	mazeRender = new MazeRenderer(maze, wallmesh);
+	mazeRender->Render()->SetTransform(Matrix4::Translation(pos_maze1) * maze_scalar);
+
+	//copy over server's start and finish nodes
 	graphNodePacket nodes;
-	nodes.start_node = start;
-	nodes.end_node = end;
+	nodes.start_node_pos = maze->start->_pos;
+	nodes.end_node_pos = maze->end->_pos;
 
 	ENetPacket* packet = enet_packet_create(&nodes, sizeof(graphNodePacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(serverConnection, 0, packet);
 
-	mazeRender = new MazeRenderer(maze, wallmesh);
-	mazeRender->Render()->SetTransform(Matrix4::Translation(pos_maze1) * maze_scalar);
-
-	playerPacket player_packet;
-
-	player_packet.playerNo = playerNum;
 
 	string playerName = string("Player %d", playerNum);
+
+	//create a player based on the mazer
 	player = CommonUtils::BuildCuboidObject(
 		playerName,
-		maze->GetStartNode()->_pos,
-		Vector3(0.5f, 1.0f, 0.5f),
+		ConvertWorldPosition(maze->GetStartNode()->_pos),
+		Vector3(0.25f, 0.5f, 0.25f),
 		true,									//Physics Enabled here Purely to make setting position easier via Physics()->SetPosition()
 		0.0f,
 		false,
 		false,
-		Vector4((rand() % 99)/100.0f, (rand() % 99) / 100.0f, (rand() % 99) / 100.0f, 1.0f));
+		Vector4((rand() % 99) / 100.0f, (rand() % 99) / 100.0f, (rand() % 99) / 100.0f, 1.0f));
 
+	//add the maze
 	this->AddGameObject(mazeRender);
 	this->AddGameObject(player);
 
 }
 
+Vector3 Net1_Client::ConvertWorldPosition(Vector3 gridPos)
+{
+	float grid_scalar = 1.0f / (float)maze->GetSize();
+
+	Matrix4 transform = mazeRender->Render()->GetWorldTransform();
+
+	Vector3 worldPos = transform * Vector3(
+		(gridPos.x + 0.5f) * grid_scalar,
+		0.1f,
+		(gridPos.y + 0.5f) * grid_scalar);
+
+	return worldPos;
+}
+
+void Net1_Client::velAndPosUpdate() {
+
+	if (pathPoint >= path_size - 1) {
+		player->Physics()->SetPosition(astar_path[0]);
+		pathPoint = 0;
+	}
+
+	if (player->Physics()->GetLinearVelocity().x <= -0.1f &&
+		player->Physics()->GetPosition().x < astar_path[(pathPoint + 1)].x) {
+		player->Physics()->SetPosition(astar_path[pathPoint + 1]);
+		pathPoint++;
+
+	}
+	else if (player->Physics()->GetLinearVelocity().x >= 0.1f &&
+		player->Physics()->GetPosition().x > astar_path[(pathPoint + 1)].x) {
+		player->Physics()->SetPosition(astar_path[pathPoint + 1]);
+		pathPoint++;
+
+	}
+	else if (player->Physics()->GetLinearVelocity().z <= -0.1f &&
+		player->Physics()->GetPosition().z < astar_path[(pathPoint + 1)].z) {
+		player->Physics()->SetPosition(astar_path[pathPoint + 1]);
+		pathPoint++;
+
+	}
+	else if (player->Physics()->GetLinearVelocity().z >= 0.1f &&
+		player->Physics()->GetPosition().z > astar_path[(pathPoint + 1)].z) {
+		player->Physics()->SetPosition(astar_path[pathPoint + 1]);
+		pathPoint++;
+
+	}
+
+	if (astar_path[pathPoint].x < astar_path[pathPoint + 1].x) {
+		player->Physics()->SetLinearVelocity(Vector3(1.0f, 0.0f, 0.0f));
+	}
+	else if (astar_path[pathPoint].x > astar_path[pathPoint + 1].x) {
+		player->Physics()->SetLinearVelocity(Vector3(-1.0f, 0.0f, 0.0f));
+	}
+	else if (astar_path[pathPoint].z < astar_path[pathPoint + 1].z) {
+		player->Physics()->SetLinearVelocity(Vector3(0.0f, 0.0f, 1.0f));
+	}
+	else if (astar_path[pathPoint].z > astar_path[pathPoint + 1].z) {
+		player->Physics()->SetLinearVelocity(Vector3(0.0f, 0.0f, -1.0f));
+	}
+}

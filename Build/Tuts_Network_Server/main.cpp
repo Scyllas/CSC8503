@@ -68,13 +68,18 @@ int astar_preset_idx;
 int print_count = 0;
 
 bool mazeToggle = false;
+bool objectCreation = false;
+bool nodes_init = false;
 std::string astar_preset_text;
 
 SearchAStar* search_as = new SearchAStar();
 
 MazeGenerator* maze = new MazeGenerator();
-GraphNode* startNode;
-GraphNode* endNode;
+Vector3 startNodePos;
+Vector3 endNodePos;
+
+int localPathCount = 0;
+Vector3* localPath;
 
 const Vector3 status_color3 = Vector3(1.0f, 0.6f, 0.6f);
 const Vector4 status_color = Vector4(status_color3.x, status_color3.y, status_color3.z, 1.0f);
@@ -134,7 +139,10 @@ int main(int arcg, char** argv)
 				{
 					graphNodePacket packet;
 					memcpy(&packet, evnt.packet->data, sizeof(graphNodePacket));
+					startNodePos = packet.start_node_pos;
+					endNodePos = packet.end_node_pos;
 					UpdateAStarPreset();
+					nodes_init = packet.nodesInit;
 				}
 				else if (evnt.packet->dataLength == sizeof(makeMazePacket) && evnt.packet->data[0] == create)
 				{
@@ -169,25 +177,32 @@ int main(int arcg, char** argv)
 			//   though this can be any variable, structure or class you wish. Just remember that everything 
 			//   you send takes up valuable network bandwidth so no sending every PhysicsObject struct each frame ;)
 			accum_time = 0.0f;
-			Vector3 pos = Vector3(
+			/*Vector3 pos = Vector3(
 				cos(rotation) * 2.0f,
 				1.5f,
 				sin(rotation) * 2.0f);
 
 			vector3Packet temp;
-			temp.vec = pos;
+			temp.vec = pos;*/
 			//Create the packet and broadcast it (unreliable transport) to all clients
-			ENetPacket* position_update = enet_packet_create(&temp, sizeof(vector3Packet), 0);
-			enet_host_broadcast(server.m_pNetwork, 0, position_update);
+			/*ENetPacket* position_update = enet_packet_create(&temp, sizeof(vector3Packet), 0);
+			enet_host_broadcast(server.m_pNetwork, 0, position_update);*/
 
-
+			if (nodes_init == true) {
+				playerPosPacket playPos;
+				playPos.pos = startNodePos;
+				
+				ENetPacket* player_position_update = enet_packet_create(&playPos, sizeof(playerPosPacket), 0);
+				enet_host_broadcast(server.m_pNetwork, 0, player_position_update);
+				nodes_init = false;
+			}
 		}
 		if (mazeToggle == true) {
 			createMaze();
 			mazeToggle = false;
 		}
-		
-		
+
+
 
 		Sleep(0);
 	}
@@ -256,7 +271,7 @@ void Win32_PrintAllAdapterIPAddresses()
 void createMaze() {
 
 
-	
+	objectCreation = true;
 
 
 	std::string astar_preset_text;
@@ -268,9 +283,12 @@ void createMaze() {
 	mazeInfo.gridSize = grid_size;
 	mazeInfo.arraySize = mazeSize;
 	mazeInfo.density = density;
+	mazeInfo.start_node_pos = maze->GetStartNode()->_pos;
+	mazeInfo.end_node_pos = maze->GetGoalNode()->_pos;
 
 	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
+
 
 	//const int wallRows = mazeSize / 8;
 	//int temp = NULL;
@@ -361,13 +379,19 @@ void UpdateAStarPreset()
 	}
 	search_as->SetWeightings(weightingG, weightingH);
 
-	startNode = maze->GetStartNode();
-	endNode = maze->GetGoalNode();
 
-	search_as->FindBestPath(startNode, endNode);
+	search_as->FindBestPath(maze->GetStartNode(), maze->GetGoalNode());
 
 	aStarPacket astar;
-	astar.astarPath = search_as;
+
+	int i = 0;
+	localPath = new Vector3[search_as->GetFinalPath().size()];
+	for (auto& it = search_as->GetFinalPath().begin(); it != search_as->GetFinalPath().end();it++) {
+		astar.astarPath[i] = (*it)->_pos;
+		localPath[i] = (*it)->_pos;
+		i++;
+	}
+	astar.pathSize = search_as->GetFinalPath().size();
 
 	ENetPacket* send_mazeWall_info = enet_packet_create(&astar, sizeof(aStarPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_mazeWall_info);

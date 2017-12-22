@@ -372,7 +372,7 @@ void Net1_Client::createMazeFromServer() {
 		false,
 		Vector4((rand() % 99) / 100.0f, (rand() % 99) / 100.0f, (rand() % 99) / 100.0f, 1.0f));
 
-	//add the maze
+	//add the maze and player to the set of drawables
 	this->AddGameObject(mazeRender);
 	this->AddGameObject(player);
 
@@ -380,6 +380,7 @@ void Net1_Client::createMazeFromServer() {
 
 Vector3 Net1_Client::ConvertWorldPosition(Vector3 gridPos)
 {
+	//function to convert the 2d maze coordiantes to 3d world space
 	float grid_scalar = 1.0f / (float)maze->GetSize();
 
 	Matrix4 transform = mazeRender->Render()->GetWorldTransform();
@@ -394,6 +395,8 @@ Vector3 Net1_Client::ConvertWorldPosition(Vector3 gridPos)
 
 void Net1_Client::velAndPosUpdate() {
 
+
+	//iterate the array of nodes to travel to and set the player's velocity in the appropriate direction
 	if (pathPoint >= path_size - 1) {
 		player->Physics()->SetPosition(astar_path[0]);
 		pathPoint = 0;

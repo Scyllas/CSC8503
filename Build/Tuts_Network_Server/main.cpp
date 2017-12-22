@@ -188,6 +188,7 @@ int main(int arcg, char** argv)
 			/*ENetPacket* position_update = enet_packet_create(&temp, sizeof(vector3Packet), 0);
 			enet_host_broadcast(server.m_pNetwork, 0, position_update);*/
 
+			//once we have graphnodes, send a player position relative to it
 			if (nodes_init == true) {
 				playerPosPacket playPos;
 				playPos.pos = startNodePos;
@@ -198,6 +199,7 @@ int main(int arcg, char** argv)
 			}
 		}
 		if (mazeToggle == true) {
+			//create a maze when called to do so by the client
 			createMaze();
 			mazeToggle = false;
 		}
@@ -278,7 +280,7 @@ void createMaze() {
 
 	maze->Generate(grid_size, density);
 	const int mazeSize = (maze->GetSize() * (maze->GetSize() - 1) * 2);
-
+	//populate the info packet
 	mazeVarPacket mazeInfo;
 	mazeInfo.gridSize = grid_size;
 	mazeInfo.arraySize = mazeSize;
@@ -289,6 +291,7 @@ void createMaze() {
 	ENetPacket* send_maze_info = enet_packet_create(&mazeInfo, sizeof(mazeVarPacket), ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(server.m_pNetwork, 0, send_maze_info);
 
+	/*an attempt as bitwise packet passing*/
 
 	//const int wallRows = mazeSize / 8;
 	//int temp = NULL;
@@ -297,7 +300,6 @@ void createMaze() {
 	//int concatCount = 0;
 	//int* walls = new int[wallRows];
 	//int wallIndex = 0;
-
 	//for (int i = 0; i < mazeSize; i++) {
 	//	current = temp2;
 	//	//ensure my ints have only 8 bytes
@@ -384,6 +386,7 @@ void UpdateAStarPreset()
 
 	aStarPacket astar;
 
+	//copy astar path to a local structure and one to be sent in a packet
 	int i = 0;
 	localPath = new Vector3[search_as->GetFinalPath().size()];
 	for (auto& it = search_as->GetFinalPath().begin(); it != search_as->GetFinalPath().end();it++) {
